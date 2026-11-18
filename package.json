@@ -1,0 +1,20 @@
+{
+  "name": "sportbooking-base",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Base hệ thống đặt sân thể thao đa cơ sở theo tài liệu PTIT và yêu cầu điều chỉnh",
+  "workspaces": ["server", "client"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "concurrently -k -n API,WEB -c cyan,green \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "db:migrate": "npm run db:migrate -w server",
+    "db:rollback": "npm run db:rollback -w server",
+    "db:seed": "npm run db:seed -w server",
+    "build": "npm run build -w client",
+    "test": "npm run test -w server",
+    "start": "npm run start -w server"
+  },
+  "devDependencies": { "concurrently": "^9.2.1" }
+}

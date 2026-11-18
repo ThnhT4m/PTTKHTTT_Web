@@ -1,0 +1,1191 @@
+{
+  "info": {
+    "name": "SportBooking base — local API",
+    "description": "Collection thao tác thủ công, không chạy toàn bộ folder liên tiếp. Chọn role bằng email rồi login để cập nhật token. Đổi date theo ngày demo; chọn slot AVAILABLE chưa bắt đầu. expected_version phải cập nhật theo GET hiện tại. Đây là sandbox, không giao dịch tiền thật. Xem docs/API.md và ACCEPTANCE.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "customer@example.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "Demo@12345",
+      "type": "string"
+    },
+    {
+      "key": "venueId",
+      "value": "44444444-4444-4444-8444-444444444441",
+      "type": "string"
+    },
+    {
+      "key": "courtId",
+      "value": "55555555-5555-4555-8555-555555555551",
+      "type": "string"
+    },
+    {
+      "key": "date",
+      "value": "2026-11-18",
+      "type": "string"
+    },
+    {
+      "key": "slotId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "targetSlotId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bookingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transactionCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refundId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expectedVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth — login lại theo role cần dùng",
+      "item": [
+        {
+          "name": "Đăng nhập (email/password biến collection)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.collectionVariables.set(\"token\", pm.response.json().data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Thông tin tài khoản",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đăng ký CUSTOMER",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Người dùng thử\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"StrongPass@123\",\n  \"phone\": \"0901000099\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đăng xuất (thu hồi mọi phiên)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Venue / Court / Timetable",
+      "item": [
+        {
+          "name": "Danh sách cơ sở",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/venues"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cơ sở của manager",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/venues?mine=true"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chi tiết cơ sở",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/venues/{{venueId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Thông tin sân",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/courts/{{courtId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Slot theo ngày — tự đổi biến date",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/courts/{{courtId}}/slots?date={{date}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.collectionVariables.set(\"slotId\", (pm.response.json().data.find(s => s.status === 'AVAILABLE') || {}).id || '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sửa thông tin sân (expectedVersion cần là số)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/courts/{{courtId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tên sân đã sửa\",\n  \"description\": \"Thông tin cập nhật\",\n  \"expected_version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sửa thời hạn giữ chỗ venue",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/venues/{{venueId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_hold_minutes\": 5,\n  \"expected_version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Customer — booking / payment",
+      "item": [
+        {
+          "name": "Giữ slot online",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/online",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time_slot_id\": \"{{slotId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.collectionVariables.set(\"bookingId\", pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đơn của tôi",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chi tiết đơn",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tạo payment sandbox",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/create",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_id\": \"{{bookingId}}\",\n  \"method\": \"BANK_TRANSFER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.collectionVariables.set(\"transactionCode\", pm.response.json().data.transaction_code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xác nhận sandbox (có thể gửi lại cùng code)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/confirm",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_code\": \"{{transactionCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dời lịch — slot cùng cơ sở/môn/giá",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/reschedule",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_time_slot_id\": \"{{targetSlotId}}\",\n  \"reason\": \"Thay đổi kế hoạch\",\n  \"is_venue_issue\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đánh giá — chỉ COMPLETED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Sân tốt\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Manager — POS / sự cố / hoàn tiền",
+      "item": [
+        {
+          "name": "Walk-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/walk-in",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time_slot_id\": \"{{slotId}}\",\n  \"customer_name\": \"Khách tại quầy\",\n  \"customer_phone\": \"0901000099\",\n  \"method\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.collectionVariables.set(\"bookingId\", pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gia hạn liền kề",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/extend",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hoàn thành sau giờ kết thúc",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Báo sự cố",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/venue-issue",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Sân gặp sự cố hệ thống chiếu sáng\",\n  \"action\": \"REPORT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Báo sự cố và tạo refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/venue-issue",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Sân không thể sử dụng\",\n  \"action\": \"REFUND\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.collectionVariables.set(\"refundId\", pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duyệt → hệ thống PROCESSING",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/refunds/{{refundId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xác nhận đã hoàn",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/refunds/{{refundId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Customer — refund sau khi sân báo sự cố",
+      "item": [
+        {
+          "name": "Yêu cầu hoàn tiền",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/refund-request",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.collectionVariables.set(\"refundId\", pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Admin — quyền cao nhất / audit",
+      "item": [
+        {
+          "name": "Tổng quan",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/overview"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tài khoản",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/users"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nhật ký",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/audit-logs"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Khóa tài khoản",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/users/{{userId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cấp role manager",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/users/{{userId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"VENUE_MANAGER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi trạng thái sân",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/courts/{{courtId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"MAINTENANCE\",\n  \"reason\": \"Bảo trì theo lịch quản trị\",\n  \"expected_version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi trạng thái cơ sở",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/venues/{{venueId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"INACTIVE\",\n  \"reason\": \"Ngưng hoạt động tạm thời\",\n  \"expected_version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Khóa slot trống",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/slots/{{slotId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"UNAVAILABLE\",\n  \"reason\": \"Bảo trì khung giờ trống\",\n  \"expected_version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON envelope', () => pm.expect(pm.response.json()).to.have.property('success'));",
+                  "pm.test('Request succeeded', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

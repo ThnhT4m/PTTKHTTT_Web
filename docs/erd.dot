@@ -1,0 +1,30 @@
+digraph ERD {
+graph [rankdir=LR, bgcolor="white", pad="0.4", nodesep="0.45", ranksep="1.1", fontname="DejaVu Sans", label="SportBooking — ERD · 10 tables
+PostgreSQL 16 | 9 business tables + audit_logs", labelloc=t, fontsize=22];
+node [shape=plain, fontname="DejaVu Sans", fontsize=11];
+edge [color="#8a9bad", arrowsize=0.7, fontname="DejaVu Sans", fontsize=9];
+users [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#183e45"><FONT COLOR="white"><B>users</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">full_name, email UNIQUE, phone</TD></TR><TR><TD ALIGN="LEFT">password_hash, token_version</TD></TR><TR><TD ALIGN="LEFT">role, is_active</TD></TR></TABLE>>];
+sport_venues [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#183e45"><FONT COLOR="white"><B>sport_venues</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">manager_id FK → users</TD></TR><TR><TD ALIGN="LEFT">name, address, district, description</TD></TR><TR><TD ALIGN="LEFT">status, version</TD></TR><TR><TD ALIGN="LEFT">payment_hold_minutes 1..10</TD></TR><TR><TD ALIGN="LEFT">minimum_online_booking_lead_minutes</TD></TR></TABLE>>];
+courts [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#183e45"><FONT COLOR="white"><B>courts</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">venue_id FK → sport_venues</TD></TR><TR><TD ALIGN="LEFT">name, sport_type, hourly_price</TD></TR><TR><TD ALIGN="LEFT">description, status, version</TD></TR><TR><TD ALIGN="LEFT">UNIQUE(venue_id, name)</TD></TR></TABLE>>];
+time_slots [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#183e45"><FONT COLOR="white"><B>time_slots</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">court_id FK → courts</TD></TR><TR><TD ALIGN="LEFT">slot_date, start_time, end_time</TD></TR><TR><TD ALIGN="LEFT">price, status, held_until, version</TD></TR><TR><TD ALIGN="LEFT">UNIQUE(court_id, date, start, end)</TD></TR><TR><TD ALIGN="LEFT">EXCLUDE overlapping intervals</TD></TR><TR><TD ALIGN="LEFT">06:00–22:00 / 60 minutes</TD></TR></TABLE>>];
+bookings [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#183e45"><FONT COLOR="white"><B>bookings</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">time_slot_id FK → time_slots</TD></TR><TR><TD ALIGN="LEFT">customer_id FK → users (nullable)</TD></TR><TR><TD ALIGN="LEFT">parent_booking_id FK → bookings</TD></TR><TR><TD ALIGN="LEFT">customer_name, customer_phone</TD></TR><TR><TD ALIGN="LEFT">status, source, total_amount</TD></TR><TR><TD ALIGN="LEFT">issue_reported_at, issue_reason</TD></TR><TR><TD ALIGN="LEFT">UNIQUE active booking per slot</TD></TR></TABLE>>];
+payments [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#183e45"><FONT COLOR="white"><B>payments</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">booking_id FK → bookings</TD></TR><TR><TD ALIGN="LEFT">method, transaction_code UNIQUE</TD></TR><TR><TD ALIGN="LEFT">status, amount</TD></TR><TR><TD ALIGN="LEFT">UNIQUE PAID payment per booking</TD></TR></TABLE>>];
+booking_reschedules [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#183e45"><FONT COLOR="white"><B>booking_reschedules</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">booking_id FK → bookings</TD></TR><TR><TD ALIGN="LEFT">old_time_slot_id FK → time_slots</TD></TR><TR><TD ALIGN="LEFT">new_time_slot_id FK → time_slots</TD></TR><TR><TD ALIGN="LEFT">requested_by, processed_by FK → users</TD></TR><TR><TD ALIGN="LEFT">reason, is_venue_issue</TD></TR></TABLE>>];
+refunds [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#183e45"><FONT COLOR="white"><B>refunds</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">booking_id FK UNIQUE → bookings</TD></TR><TR><TD ALIGN="LEFT">requested_by, processed_by FK → users</TD></TR><TR><TD ALIGN="LEFT">amount, reason, status</TD></TR></TABLE>>];
+reviews [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#183e45"><FONT COLOR="white"><B>reviews</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">booking_id FK UNIQUE → bookings</TD></TR><TR><TD ALIGN="LEFT">rating CHECK 1..5, comment</TD></TR></TABLE>>];
+audit_logs [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#cbd5e1"><TR><TD BGCOLOR="#765027"><FONT COLOR="white"><B>audit_logs</B></FONT></TD></TR><TR><TD ALIGN="LEFT">id PK</TD></TR><TR><TD ALIGN="LEFT">actor_id FK → users (nullable)</TD></TR><TR><TD ALIGN="LEFT">action, entity_type, entity_id</TD></TR><TR><TD ALIGN="LEFT">before_data JSONB, after_data JSONB</TD></TR><TR><TD ALIGN="LEFT">reason, created_at</TD></TR></TABLE>>];
+users -> sport_venues [label="manager · 1:N"];
+sport_venues -> courts [label="1:N"];
+courts -> time_slots [label="1:N"];
+time_slots -> bookings [label="1:N history"];
+users -> bookings [label="customer · 1:N"];
+bookings -> bookings [label="parent · 0..1:N"];
+bookings -> payments [label="1:N attempts"];
+bookings -> booking_reschedules [label="1:N"];
+time_slots -> booking_reschedules [label="old / new · 1:N"];
+users -> booking_reschedules [label="requested / processed"];
+bookings -> refunds [label="1:0..1"];
+users -> refunds [label="requested / processed"];
+bookings -> reviews [label="1:0..1"];
+users -> audit_logs [label="actor · 1:N"];
+}

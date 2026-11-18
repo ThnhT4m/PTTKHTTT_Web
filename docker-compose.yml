@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sportbooking
+      POSTGRES_USER: sportbooking
+      POSTGRES_PASSWORD: sportbooking_dev
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - sportbooking_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sportbooking -d sportbooking"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  sportbooking_pgdata:
