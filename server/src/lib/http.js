@@ -20,7 +20,17 @@ export function errorHandler(err, req, res, next) {
   let code = err.code || 'INTERNAL_ERROR';
   let message = err.message;
   let details = err.details;
-  if (err instanceof ZodError) {
+  if (err.type === 'entity.parse.failed') {
+    status = 400;
+    code = 'INVALID_JSON';
+    message = 'JSON không hợp lệ.';
+    details = undefined;
+  } else if (err.type === 'entity.too.large') {
+    status = 413;
+    code = 'PAYLOAD_TOO_LARGE';
+    message = 'Nội dung yêu cầu vượt quá giới hạn cho phép.';
+    details = undefined;
+  } else if (err instanceof ZodError) {
     status = 400;
     code = 'VALIDATION_ERROR';
     message = 'Dữ liệu không hợp lệ.';

@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "SportBooking base — local API",
+    "name": "SportBooking backend — PDF 23/11/2026",
     "description": "Collection thao tác thủ công, không chạy toàn bộ folder liên tiếp. Chọn role bằng email rồi login để cập nhật token. Đổi date theo ngày demo; chọn slot AVAILABLE chưa bắt đầu. expected_version phải cập nhật theo GET hiện tại. Đây là sandbox, không giao dịch tiền thật. Xem docs/API.md và ACCEPTANCE.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -47,7 +47,7 @@
     },
     {
       "key": "date",
-      "value": "2026-11-18",
+      "value": "",
       "type": "string"
     },
     {
@@ -422,6 +422,151 @@
               }
             }
           ]
+        },
+        {
+          "name": "Lọc sân trong cơ sở",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/venues/{{venueId}}/courts?sport_type=BADMINTON&limit=100&offset=0"
+          }
+        },
+        {
+          "name": "Manager sinh lịch 30 ngày (từ hôm nay)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/venues/{{venueId}}/generate-slots",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"days\": 30,\n  \"court_ids\": [\n    \"{{courtId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Manager chỉnh giá slot chưa đặt",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/slots/{{slotId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"price\": 150000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Manager khóa slot chưa có đơn",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/slots/{{slotId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"status\": \"UNAVAILABLE\",\n  \"reason\": \"Bảo trì hệ thống đèn sân\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Manager đổi trạng thái sân",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/courts/{{courtId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"status\": \"MAINTENANCE\",\n  \"reason\": \"Bảo trì hệ thống đèn sân\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Manager đổi trạng thái cơ sở",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/venues/{{venueId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"status\": \"INACTIVE\",\n  \"reason\": \"Cơ sở tạm ngừng hoạt động\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Manager xóa mềm sân",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/courts/{{courtId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"reason\": \"Ngưng hoạt động sân này\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         }
       ]
     },
@@ -649,6 +794,19 @@
               }
             }
           ]
+        },
+        {
+          "name": "Lịch sử booking / thanh toán / dời / refund",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/{{bookingId}}/history"
+          }
         }
       ]
     },
@@ -894,6 +1052,45 @@
               }
             }
           ]
+        },
+        {
+          "name": "Danh sách booking cần xử lý",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings?status=CONFIRMED&has_issue=true&limit=100&offset=0"
+          }
+        },
+        {
+          "name": "Danh sách refund theo phạm vi đăng nhập",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/refunds?limit=100&offset=0"
+          }
+        },
+        {
+          "name": "Chi tiết refund",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/refunds/{{refundId}}"
+          }
         }
       ]
     },
@@ -1186,6 +1383,17 @@
           ]
         }
       ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('date')) pm.collectionVariables.set('date', new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));"
+        ]
+      }
     }
   ]
 }

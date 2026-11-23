@@ -1,0 +1,282 @@
+Kiểm chứng backend bắt đầu: 2026-11-23T09:05:31.950Z
+Node: v24.18.0
+
+$ npm ping --fetch-retries=0 --fetch-timeout=15000
+npm notice PING https://registry.npmjs.org/
+npm notice PONG 724ms
+
+$ docker info --format {{.ServerVersion}}
+29.9.3
+
+$ npm ci --workspace server --ignore-scripts --no-audit --no-fund
+
+added 152 packages in 4s
+
+$ docker compose up -d --wait db
+ Image postgres:16-alpine Pulling 
+ 98e9a0326760 Pulling fs layer 0B
+ cc382d912eb7 Pulling fs layer 0B
+ 6cedc56424d1 Pulling fs layer 0B
+ 59b353deb50e Pulling fs layer 0B
+ 881fc932939e Pulling fs layer 0B
+ 7a36a4ed4172 Pulling fs layer 0B
+ 47714f1b82c2 Pulling fs layer 0B
+ 8e5860b895ab Pulling fs layer 0B
+ b9f6a8f632b2 Pulling fs layer 0B
+ 576cb8ef4643 Pulling fs layer 0B
+ 881fc932939e Downloading 1.049MB
+ 8e5860b895ab Downloading 170B
+ 881fc932939e Downloading 3.854MB
+ cc382d912eb7 Download complete 0B
+ 8e5860b895ab Download complete 0B
+ 881fc932939e Download complete 0B
+ 881fc932939e Extracting 1B
+ 881fc932939e Extracting 1B
+ 98e9a0326760 Download complete 0B
+ 881fc932939e Extracting 1B
+ 6cedc56424d1 Download complete 0B
+ 881fc932939e Pull complete 0B
+ 6cedc56424d1 Pull complete 0B
+ 47714f1b82c2 Download complete 0B
+ 59b353deb50e Download complete 0B
+ 576cb8ef4643 Downloading 1.049MB
+ 59b353deb50e Extracting 1B
+ 576cb8ef4643 Downloading 5.243MB
+ 59b353deb50e Extracting 1B
+ 576cb8ef4643 Downloading 7.34MB
+ 59b353deb50e Pull complete 0B
+ 576cb8ef4643 Downloading 12.58MB
+ b9f6a8f632b2 Download complete 0B
+ 7a36a4ed4172 Download complete 0B
+ 576cb8ef4643 Downloading 16.78MB
+ 7a36a4ed4172 Pull complete 0B
+ 576cb8ef4643 Downloading 20.97MB
+ cc382d912eb7 Pull complete 0B
+ 576cb8ef4643 Downloading 25.17MB
+ 576cb8ef4643 Downloading 28.31MB
+ 576cb8ef4643 Downloading 32.24MB
+ 02682a6b40e8 Download complete 0B
+ 576cb8ef4643 Downloading 36.7MB
+ 576cb8ef4643 Downloading 39.85MB
+ 576cb8ef4643 Downloading 44.04MB
+ 576cb8ef4643 Downloading 48.23MB
+ dada3b93fb98 Download complete 0B
+ 576cb8ef4643 Downloading 52.43MB
+ 576cb8ef4643 Downloading 56.62MB
+ 576cb8ef4643 Downloading 60.82MB
+ 576cb8ef4643 Downloading 63.96MB
+ 576cb8ef4643 Downloading 68.16MB
+ 576cb8ef4643 Downloading 72.35MB
+ 576cb8ef4643 Downloading 76.55MB
+ 576cb8ef4643 Downloading 79.69MB
+ 576cb8ef4643 Downloading 83.89MB
+ 576cb8ef4643 Downloading 89.13MB
+ 576cb8ef4643 Downloading 93.32MB
+ 576cb8ef4643 Downloading 97.52MB
+ 576cb8ef4643 Downloading 100.7MB
+ 576cb8ef4643 Downloading 104.9MB
+ 576cb8ef4643 Downloading 108MB
+ 576cb8ef4643 Downloading 111.5MB
+ 576cb8ef4643 Downloading 111.5MB
+ 576cb8ef4643 Downloading 111.5MB
+ 576cb8ef4643 Downloading 111.5MB
+ 576cb8ef4643 Download complete 0B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 1B
+ 576cb8ef4643 Extracting 2B
+ 576cb8ef4643 Extracting 2B
+ 576cb8ef4643 Extracting 2B
+ 576cb8ef4643 Extracting 2B
+ 576cb8ef4643 Extracting 2B
+ 576cb8ef4643 Extracting 2B
+ 576cb8ef4643 Extracting 2B
+ 576cb8ef4643 Extracting 2B
+ 576cb8ef4643 Extracting 2B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 3B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 4B
+ 576cb8ef4643 Extracting 5B
+ 576cb8ef4643 Extracting 5B
+ 576cb8ef4643 Pull complete 0B
+ 47714f1b82c2 Pull complete 0B
+ 8e5860b895ab Pull complete 0B
+ 98e9a0326760 Extracting 1B
+ b9f6a8f632b2 Pull complete 0B
+ 98e9a0326760 Pull complete 0B
+ Image postgres:16-alpine Pulled 
+ Network pttkhttt_web_default Creating 
+ Volume pttkhttt_web_sportbooking_pgdata Creating 
+ Volume pttkhttt_web_sportbooking_pgdata Creating 
+ Network pttkhttt_web_default Creating 
+ Volume pttkhttt_web_sportbooking_pgdata Created 
+ Volume pttkhttt_web_sportbooking_pgdata Created 
+ Network pttkhttt_web_default Created 
+ Network pttkhttt_web_default Created 
+ Container pttkhttt_web-db-1 Creating 
+ Container pttkhttt_web-db-1 Created 
+ Container pttkhttt_web-db-1 Starting 
+ Container pttkhttt_web-db-1 Started 
+ Container pttkhttt_web-db-1 Waiting 
+ Container pttkhttt_web-db-1 Healthy 
+
+$ docker compose exec -T db psql -U sportbooking -d postgres -tAc SELECT 1 FROM pg_database WHERE datname = 'sportbooking_test'
+
+$ docker compose exec -T db createdb -U sportbooking sportbooking_test
+
+$ docker compose port db 5432
+127.0.0.1:5432
+
+$ npm run check:server
+
+> sportbooking-base@1.0.0 check:server
+> npm run check -w server
+
+
+> sportbooking-server@0.1.0 check
+> node scripts/check-syntax.js
+
+Cú pháp hợp lệ: 41 file JavaScript backend.
+
+$ npm test
+
+> sportbooking-base@1.0.0 test
+> npm run test -w server
+
+
+> sportbooking-server@0.1.0 test
+> node --test --test-concurrency=1 test/*.test.js test/unit/*.test.js
+
+✔ Auth: API riêng tư đòi JWT; đăng ký không tự cấp ADMIN (2109.14842ms)
+✔ TC-01: hai khách giữ cùng slot, chỉ một thành công (75.862141ms)
+✔ TC-02: expire job chuyển booking và slot trong cùng giao dịch (68.074241ms)
+✔ TC-03: payment atomic và callback lặp không ghi trùng (128.228239ms)
+✔ TC-04: hold đúng 5 phút; từ chối 15 phút và đặt sát giờ (66.527869ms)
+✔ TC-05: Walk-in bán được ca đang diễn ra (54.805613ms)
+✔ TC-06: gia hạn chỉ sang đúng ca liền kề AVAILABLE (116.826189ms)
+✔ TC-07: dời tự nguyện mở slot cũ; khách không tự hủy/hoàn (147.11638ms)
+✔ TC-07b: dời do sự cố giữ slot hỏng UNAVAILABLE (145.576335ms)
+✔ TC-08: hoàn tiền đúng chuỗi, atomic REFUNDED/CANCELLED_BY_VENUE/UNAVAILABLE (208.808799ms)
+✔ TC-09: complete sau giờ kết thúc, đánh giá đúng chủ đúng một lần (108.835293ms)
+✔ TC-10: manager khác cơ sở bị chặn sửa và xử lý đơn (115.838578ms)
+✔ Bổ sung: status tách khỏi PATCH metadata và route ADMIN; sinh lịch có validation (18.008527ms)
+✔ Bổ sung: hai người sửa cùng version, một thành công và một EDIT_CONFLICT (24.260302ms)
+✔ Bổ sung: ADMIN khóa sân tranh chấp với booking, không tạo trạng thái sai (43.880653ms)
+✔ Bổ sung: thanh toán sau hết hold không chiếm lại slot (99.876587ms)
+✔ Bổ sung: ADMIN đổi trạng thái bắt buộc lý do và audit đúng actor (28.087662ms)
+✔ M3: sinh lịch đồng thời không trùng, không ghi đè slot đã giữ hoặc giá đã sửa (118.116136ms)
+✔ M3: sinh đủ 30 ngày 06–22 cho sân mới; không overlap (174.126701ms)
+✔ M3/TC-10: chặn sinh lịch sai chủ, sân khác cơ sở và ngày ngoài hạn (46.775204ms)
+✔ M2/M3: manager đổi trạng thái trong phạm vi; customer và manager khác bị chặn (143.151887ms)
+✔ M2: CRUD cơ sở/sân, xóa mềm giữ lịch sử; chủ khác không thể đổi trạng thái (110.036732ms)
+✔ M3: giá slot có version và ownership; không sửa giá slot đang HELD/BOOKED (172.128806ms)
+✔ M5: nhiều payment attempts chỉ một PAID, các attempt còn lại FAILED (99.994496ms)
+✔ M5/M6: confirm sau deadline bị chặn dù cron chưa chạy (110.455447ms)
+✔ M7/M8: complete sớm bị chặn; gia hạn thành công tạo booking con và payment (175.979298ms)
+✔ M9: hai booking dời cùng một đích, chỉ một thắng và bên thua rollback (212.541145ms)
+✔ M9/M10: refund và dời sân loại trừ nhau trong cùng cuộc đua (173.280183ms)
+✔ M10: list/detail/history đúng phạm vi; yêu cầu hoàn lặp và xác nhận lặp an toàn (265.401588ms)
+✔ Danh sách: phân trang, lọc giá/môn và scope không bị vượt bằng query (153.781541ms)
+error: insert into "audit_logs" ("action", "actor_id", "after_data", "before_data", "entity_id", "entity_type", "reason") values ($1, $2, $3, $4, $5, $6, $7) returning * - forced audit failure
+    at parseErrorMessage (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:306:11)
+    at Parser.handlePacket (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:143:27)
+    at Parser.parse (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:37:38)
+    at Socket.<anonymous> (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/index.js:12:42)
+    at Socket.emit (node:events:509:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    at Readable.push (node:internal/streams/readable:394:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+  length: 143,
+  severity: 'ERROR',
+  code: 'P0001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL function test_reject_price_audit() line 2 at RAISE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '3913',
+  routine: 'exec_stmt_raise'
+}
+✔ Audit thất bại rollback cả giá/version; không commit thiếu nhật ký (77.414862ms)
+✔ HTTP: JSON hỏng và payload quá lớn vẫn trả envelope lỗi (10.036381ms)
+✔ M1/M12: logout/khóa/cấp quyền thu hồi token, dữ liệu user và audit không lộ bí mật (2102.215574ms)
+✔ PostgreSQL: ràng buộc overlap, thời lượng, HELD deadline và payment unique (112.555641ms)
+error: insert into "booking_reschedules" ("booking_id", "is_venue_issue", "new_time_slot_id", "old_time_slot_id", "processed_by", "reason", "requested_by") values ($1, $2, $3, $4, $5, $6, $7) - forced reschedule history failure
+    at parseErrorMessage (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:306:11)
+    at Parser.handlePacket (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:143:27)
+    at Parser.parse (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:37:38)
+    at Socket.<anonymous> (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/index.js:12:42)
+    at Socket.emit (node:events:509:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    at Readable.push (node:internal/streams/readable:394:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+  length: 155,
+  severity: 'ERROR',
+  code: 'P0001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL function test_reject_reschedule() line 2 at RAISE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '3913',
+  routine: 'exec_stmt_raise'
+}
+✔ M9: lỗi ghi lịch sử dời rollback booking và cả hai slot (147.951284ms)
+✔ Ngày lịch đổi lúc 00:00 Việt Nam, không phải 00:00 UTC (37.670075ms)
+✔ Khoảng 30 ngày qua tháng, năm và ngày nhuận giữ đúng ngày lịch (0.609203ms)
+✔ Lịch 30 ngày: mỗi sân đủ 16 ca 60 phút, không trùng hoặc chồng lấn (10.721287ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9070.711173
+
+Các lệnh kiểm chứng đã thành công. Xem số pass/fail/skip trong kết quả test phía trên.
+
+Thời gian: 48.8 giây.
+Log: /home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/backend-verification.log

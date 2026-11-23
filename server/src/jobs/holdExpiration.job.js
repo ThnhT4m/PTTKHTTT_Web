@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { db } from '../db/knex.js';
 import { lockVenueCourts, lockSlots } from '../lib/locking.js';
 import { databaseNow } from '../modules/bookings/bookings.repository.js';
+import { writeAudit } from '../lib/audit.js';
 
 // Recheck the deadline after acquiring all locks; confirmation may have won
 // the race since the initial scan. Never release BOOKED or UNAVAILABLE slots.
@@ -53,6 +54,12 @@ export async function expireHolds() {
           version: trx.raw('version + 1'),
           updated_at: trx.fn.now(),
         });
+      for (const booking of bookings) {
+        await writeAudit(trx, { actorId: null, action: 'BOOKING_EXPIRED',
+          entityType: 'bookings', entityId: booking.id,
+          before: { status: 'PENDING', slot_status: 'HELD' },
+          after: { status: 'EXPIRED', slot_status: 'AVAILABLE' } });
+      }
       return 1;
     });
   }

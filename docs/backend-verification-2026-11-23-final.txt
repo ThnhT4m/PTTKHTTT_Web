@@ -1,0 +1,159 @@
+Kiểm chứng backend bắt đầu: 2026-11-23T09:23:05.736Z
+Node: v24.18.0
+
+$ npm ping --fetch-retries=0 --fetch-timeout=15000
+npm notice PING https://registry.npmjs.org/
+npm notice PONG 727ms
+
+$ docker info --format {{.ServerVersion}}
+29.9.3
+
+$ npm ci --workspace server --ignore-scripts --no-audit --no-fund
+
+added 152 packages in 4s
+
+$ docker compose up -d --wait db
+ Container pttkhttt_web-db-1 Running 
+ Container pttkhttt_web-db-1 Waiting 
+ Container pttkhttt_web-db-1 Healthy 
+
+$ docker compose exec -T db psql -U sportbooking -d postgres -tAc SELECT 1 FROM pg_database WHERE datname = 'sportbooking_test'
+1
+
+$ docker compose port db 5432
+127.0.0.1:5432
+
+$ npm run check:server
+
+> sportbooking-base@1.0.0 check:server
+> npm run check -w server
+
+
+> sportbooking-server@0.1.0 check
+> node scripts/check-syntax.js
+
+Cú pháp hợp lệ: 43 file JavaScript backend.
+
+$ npm test
+
+> sportbooking-base@1.0.0 test
+> npm run test -w server
+
+
+> sportbooking-server@0.1.0 test
+> node --test --test-concurrency=1 test/*.test.js test/unit/*.test.js
+
+✔ Auth: API riêng tư đòi JWT; đăng ký không tự cấp ADMIN (1706.164629ms)
+✔ TC-01: hai khách giữ cùng slot, chỉ một thành công (67.123747ms)
+✔ TC-02: expire job chuyển booking và slot trong cùng giao dịch (63.900854ms)
+✔ TC-03: payment atomic và callback lặp không ghi trùng (107.348182ms)
+✔ TC-04: hold đúng 5 phút; từ chối 15 phút và đặt sát giờ (65.609904ms)
+✔ TC-05: Walk-in bán được ca đang diễn ra (33.952608ms)
+✔ TC-06: gia hạn chỉ sang đúng ca liền kề AVAILABLE (123.66127ms)
+✔ TC-07: dời tự nguyện mở slot cũ; khách không tự hủy/hoàn (149.350172ms)
+✔ TC-07b: dời do sự cố giữ slot hỏng UNAVAILABLE (140.956083ms)
+✔ TC-08: hoàn tiền đúng chuỗi, atomic REFUNDED/CANCELLED_BY_VENUE/UNAVAILABLE (202.589412ms)
+✔ TC-09: complete sau giờ kết thúc, đánh giá đúng chủ đúng một lần (99.900759ms)
+✔ TC-10: manager khác cơ sở bị chặn sửa và xử lý đơn (105.552434ms)
+✔ Bổ sung: status tách khỏi PATCH metadata và route ADMIN; sinh lịch có validation (16.242635ms)
+✔ Bổ sung: hai người sửa cùng version, một thành công và một EDIT_CONFLICT (23.458824ms)
+✔ Bổ sung: ADMIN khóa sân tranh chấp với booking, không tạo trạng thái sai (43.152289ms)
+✔ Bổ sung: thanh toán sau hết hold không chiếm lại slot (111.343083ms)
+✔ Bổ sung: ADMIN đổi trạng thái bắt buộc lý do và audit đúng actor (25.968231ms)
+✔ M3: sinh lịch đồng thời không trùng, không ghi đè slot đã giữ hoặc giá đã sửa (118.965566ms)
+✔ M3: sinh đủ 30 ngày 06–22 cho sân mới; không overlap (170.809836ms)
+✔ M3/TC-10: chặn sinh lịch sai chủ, sân khác cơ sở và ngày ngoài hạn (54.038531ms)
+✔ M2/M3: manager đổi trạng thái trong phạm vi; customer và manager khác bị chặn (148.679882ms)
+✔ M2: CRUD cơ sở/sân, xóa mềm giữ lịch sử; chủ khác không thể đổi trạng thái (109.689137ms)
+✔ M3: giá slot có version và ownership; không sửa giá slot đang HELD/BOOKED (176.766288ms)
+✔ M5: nhiều payment attempts chỉ một PAID, các attempt còn lại FAILED (114.577319ms)
+✔ M5/M6: confirm sau deadline bị chặn dù cron chưa chạy (84.764412ms)
+✔ M7/M8: complete sớm bị chặn; gia hạn thành công tạo booking con và payment (173.797024ms)
+✔ M9: hai booking dời cùng một đích, chỉ một thắng và bên thua rollback (217.058992ms)
+✔ M9/M10: refund và dời sân loại trừ nhau trong cùng cuộc đua (169.239546ms)
+✔ M10: list/detail/history đúng phạm vi; yêu cầu hoàn lặp và xác nhận lặp an toàn (429.739142ms)
+✔ Danh sách: phân trang, lọc giá/môn và scope không bị vượt bằng query (490.968767ms)
+error: insert into "audit_logs" ("action", "actor_id", "after_data", "before_data", "entity_id", "entity_type", "reason") values ($1, $2, $3, $4, $5, $6, $7) returning * - forced audit failure
+    at parseErrorMessage (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:306:11)
+    at Parser.handlePacket (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:143:27)
+    at Parser.parse (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:37:38)
+    at Socket.<anonymous> (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/index.js:12:42)
+    at Socket.emit (node:events:509:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    at Readable.push (node:internal/streams/readable:394:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+  length: 143,
+  severity: 'ERROR',
+  code: 'P0001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL function test_reject_price_audit() line 2 at RAISE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '3913',
+  routine: 'exec_stmt_raise'
+}
+✔ Audit thất bại rollback cả giá/version; không commit thiếu nhật ký (171.926044ms)
+✔ HTTP: JSON hỏng và payload quá lớn vẫn trả envelope lỗi (17.596103ms)
+✔ M1/M12: logout/khóa/cấp quyền thu hồi token, dữ liệu user và audit không lộ bí mật (2539.025964ms)
+✔ PostgreSQL: ràng buộc overlap, thời lượng, HELD deadline và payment unique (113.696933ms)
+error: insert into "booking_reschedules" ("booking_id", "is_venue_issue", "new_time_slot_id", "old_time_slot_id", "processed_by", "reason", "requested_by") values ($1, $2, $3, $4, $5, $6, $7) - forced reschedule history failure
+    at parseErrorMessage (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:306:11)
+    at Parser.handlePacket (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:143:27)
+    at Parser.parse (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/parser.js:37:38)
+    at Socket.<anonymous> (/home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/node_modules/pg-protocol/dist/index.js:12:42)
+    at Socket.emit (node:events:509:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    at Readable.push (node:internal/streams/readable:394:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+  length: 155,
+  severity: 'ERROR',
+  code: 'P0001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL function test_reject_reschedule() line 2 at RAISE',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '3913',
+  routine: 'exec_stmt_raise'
+}
+✔ M9: lỗi ghi lịch sử dời rollback booking và cả hai slot (150.81921ms)
+✔ M1: chặn mật khẩu bị bcrypt cắt ngầm, giới hạn theo byte UTF-8 (1074.057665ms)
+✔ M4/M6: đơn EXPIRED không nhận deadline giữ chỗ của khách đặt sau (107.320793ms)
+✔ M5: recheck deadline ở bước BOOKED; hết hạn phải rollback cả payment và booking (117.420806ms)
+✔ Password: không bỏ qua hậu tố vượt giới hạn 72 byte bcrypt (4.926179ms)
+✔ Password: đếm byte UTF-8 cho tiếng Việt và emoji, không chỉ số ký tự (0.468577ms)
+✔ Auth: register/login cùng giới hạn mật khẩu, không trim mật khẩu (4.715792ms)
+✔ Register: chặn tự cấp role hoặc trường truy cập đặc quyền (0.903896ms)
+✔ Ngày lịch đổi lúc 00:00 Việt Nam, không phải 00:00 UTC (40.440477ms)
+✔ Khoảng 30 ngày qua tháng, năm và ngày nhuận giữ đúng ngày lịch (0.632481ms)
+✔ Lịch 30 ngày: mỗi sân đủ 16 ca 60 phút, không trùng hoặc chồng lấn (10.316566ms)
+ℹ tests 45
+ℹ suites 0
+ℹ pass 45
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11203.260397
+
+Các lệnh kiểm chứng đã thành công. Xem số pass/fail/skip trong kết quả test phía trên.
+
+Thời gian: 27.8 giây.
+Log: /home/thnht4m/Desktop/PTTKHT/PTTKHTTT_Web/backend-verification.log

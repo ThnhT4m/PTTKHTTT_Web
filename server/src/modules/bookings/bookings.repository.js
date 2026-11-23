@@ -20,12 +20,14 @@ export function bookingDetailsQuery(queryable) {
       's.slot_date',
       's.start_time',
       's.end_time',
-      's.held_until',
       's.status as slot_status',
       'r.id as refund_id',
       'r.status as refund_status',
       'rv.id as review_id',
     )
+    .select(queryable.raw(
+      "CASE WHEN b.status = 'PENDING' AND s.status = 'HELD' THEN s.held_until ELSE NULL END AS held_until",
+    ))
     .select(
       queryable.raw("(s.slot_date + s.start_time) AT TIME ZONE 'Asia/Ho_Chi_Minh' as start_at"),
     )

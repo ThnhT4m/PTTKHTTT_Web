@@ -161,7 +161,7 @@ export async function seed(knex) {
     await trx('users').insert(users);
     await trx('sport_venues').insert(venues);
     await trx('courts').insert(courts);
-    // Fixed demo fixture; this is not a runtime schedule-generation endpoint/job.
+    // Demo fixture; runtime schedule generation is handled by module M3.
     for (let offset = 0; offset < slots.length; offset += 500) {
       await trx('time_slots').insert(slots.slice(offset, offset + 500));
     }

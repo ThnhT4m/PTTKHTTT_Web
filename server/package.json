@@ -10,7 +10,10 @@
     "db:migrate": "knex migrate:latest",
     "db:rollback": "knex migrate:rollback",
     "db:seed": "knex seed:run",
-    "test": "node --test --test-concurrency=1 test/*.test.js"
+    "check": "node scripts/check-syntax.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js test/unit/*.test.js",
+    "test:unit": "node --test test/unit/*.test.js",
+    "test:integration": "node --test --test-concurrency=1 test/*.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

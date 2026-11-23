@@ -7,6 +7,7 @@ const router = Router();
 router.use('/bookings', requireAuth);
 router.get('/bookings', asyncHandler(controller.list));
 router.get('/bookings/:id', asyncHandler(controller.detail));
+router.get('/bookings/:id/history', asyncHandler(controller.history));
 router.post('/bookings/online', requireRole(['CUSTOMER']), asyncHandler(controller.online));
 router.post(
   '/bookings/walk-in',

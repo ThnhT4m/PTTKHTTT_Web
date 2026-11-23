@@ -18,14 +18,14 @@ Frontend phụ trách hiển thị, điều hướng và phản hồi lỗi; ser
 
 Đơn vị tiền: integer VND. ID: UUID. `slot_date` và `start_time/end_time` là ngày/giờ địa phương `Asia/Ho_Chi_Minh`. Server dựng mốc thời gian bằng `(slot_date + start_time) AT TIME ZONE 'Asia/Ho_Chi_Minh'`, không phụ thuộc timezone của máy Node hoặc container. `held_until` và cột audit là `timestamptz`.
 
-## 2. Thay đổi so với PDF
+## 2. Phạm vi PDF và các quy ước bổ sung
 
-- Không có API, cron hoặc UI sinh lịch tự động; khung cố định 06:00–22:00, ca 60 phút. Seed chỉ nạp dữ liệu demo hữu hạn.
-- Manager sửa metadata cơ sở/sân của mình. Chỉ ADMIN đổi trực tiếp trạng thái venue/court/slot, có lý do và audit. Luồng sự cố của manager vẫn được cho phép vì đó là nghiệp vụ có kiểm soát và truy vết.
+- M3 sinh lịch qua API do manager/admin gọi: 06:00–22:00, ca 60 phút, tối đa 30 ngày/lần trong cửa sổ hôm nay → hôm nay + 30 ngày Việt Nam. Seed phục vụ demo, không có cron tự sinh lịch. Frontend chưa sửa trong lần cập nhật backend này.
+- Manager sửa metadata, sinh lịch, giá slot và trạng thái trong cơ sở mình. ADMIN được thao tác toàn hệ thống. Thay trạng thái qua endpoint riêng có reason, version và audit; không sửa status qua PATCH metadata.
 - Bổ sung `version` cho venue/court/slot, `token_version` cho user và `audit_logs`. Bảng audit là bảng thứ 10 để đáp ứng ảnh, không phải sai lệch bỏ sót yêu cầu 9 bảng gốc.
 - Dời lịch cùng cơ sở, cùng môn, cùng giá. Không có xử lý chênh lệch tiền trong base.
 - Không xóa vật lý danh mục có lịch sử; dùng trạng thái ngưng phục vụ.
-- Giá metadata court không tự cập nhật giá slot đã seed; sân mới chưa có lịch. Cần quy trình import/migration có kiểm soát khi mở rộng dữ liệu cố định.
+- Giá court áp dụng cho slot sinh mới. M3 không ghi đè slot tồn tại; chỉnh giá riêng chỉ cho ca tương lai AVAILABLE/UNAVAILABLE không có booking hiệu lực. Booking giữ giá snapshot. Sinh lịch khóa venue rồi court; cùng transaction kiểm tra ownership và insert không trùng, audit số ca đã tạo/bỏ qua.
 
 ## 3. ERD — 10 bảng
 
@@ -189,7 +189,7 @@ Walk-in không bắt buộc tài khoản khách: `customer_id` có thể null, c
 
 ## 4. Vòng đời trạng thái
 
-Venue/court dùng `ACTIVE / INACTIVE / MAINTENANCE`. Manager không được gửi trạng thái qua PATCH metadata. ADMIN ngưng/bảo trì chỉ khi không còn đơn PENDING/CONFIRMED chưa kết thúc; nếu có thì trả 409 để xử lý nghiệp vụ trước.
+Venue/court dùng `ACTIVE / INACTIVE / MAINTENANCE`. Manager không được gửi trạng thái qua PATCH metadata. Manager đúng cơ sở hoặc ADMIN ngưng/bảo trì chỉ khi không còn đơn PENDING/CONFIRMED chưa kết thúc; nếu có thì trả 409 để xử lý nghiệp vụ trước.
 
 ```mermaid
 stateDiagram-v2
@@ -200,8 +200,8 @@ stateDiagram-v2
   AVAILABLE --> BOOKED : walk-in hoặc extension
   BOOKED --> AVAILABLE : khách chủ động dời
   BOOKED --> UNAVAILABLE : sự cố / dời do sự cố / refund
-  AVAILABLE --> UNAVAILABLE : ADMIN khóa có lý do
-  UNAVAILABLE --> AVAILABLE : ADMIN mở khi không có đơn chiếm
+  AVAILABLE --> UNAVAILABLE : Manager/Admin khóa có lý do
+  UNAVAILABLE --> AVAILABLE : Manager/Admin mở khi không có đơn chiếm
 ```
 
 Các thay đổi nghiệp vụ vẫn phải chạy kiểm tra và khóa dòng dù không phải thao tác đổi trạng thái trực tiếp của admin. Complete giữ slot BOOKED, không mở lịch đã dùng.
@@ -247,7 +247,7 @@ Mọi luồng đều khóa theo cùng thứ tự:
 
 Đọc tham chiếu booking/slot trước để xác định court; sau khi có khóa slot, đọc lại và khóa booking. Nếu booking đã dời sang slot khác, trả 409 để client thử lại; không cập nhật trên giả định cũ. Đây là lý do không khóa booking trước rồi mới đi khóa venue/court.
 
-Thao tác admin khóa sân dùng cùng khóa venue/court với booking. Kiểm tra venue/court ACTIVE phải diễn ra sau khi đã khóa, tránh kiểm tra ACTIVE xong sân bị đóng trước khi tạo đơn. Nhiều slot khi dời lịch luôn khóa theo thứ tự UUID để giảm deadlock.
+Thao tác manager/admin khóa sân dùng cùng khóa venue/court với booking. Kiểm tra venue/court ACTIVE phải diễn ra sau khi đã khóa, tránh kiểm tra ACTIVE xong sân bị đóng trước khi tạo đơn. Nhiều slot khi dời lịch luôn khóa theo thứ tự UUID để giảm deadlock.
 
 ### Atomic và idempotent
 
@@ -265,7 +265,7 @@ Thao tác admin khóa sân dùng cùng khóa venue/court với booking. Kiểm t
 | Actor | Phạm vi |
 |---|---|
 | CUSTOMER | Tìm sân, đặt online, payment demo, đọc/dời đơn của mình, yêu cầu refund khi có sự cố, review đơn COMPLETED |
-| VENUE_MANAGER | Metadata và giao dịch trong cơ sở có manager_id của mình; walk-in, complete, extend, sự cố và refund |
+| VENUE_MANAGER | CRUD/xóa mềm metadata, sinh lịch, chỉnh giá, trạng thái có audit và giao dịch trong cơ sở mình; walk-in, complete, extend, sự cố/refund |
 | ADMIN | Quản trị toàn hệ thống, thay trạng thái trực tiếp có lý do, xem audit |
 
 Server truy ngược booking → slot → court → venue khi kiểm tra manager. Không tin `venue_id` hoặc `manager_id` gửi từ client. ADMIN được bỏ qua ownership nhưng vẫn phải tuân thủ ràng buộc nghiệp vụ, version và audit.
@@ -276,4 +276,4 @@ Sandbox confirm được bảo vệ bằng auth, ownership và cờ môi trườ
 
 ## 7. Hướng mở rộng
 
-Chốt chính sách nạp lịch cố định dài hạn; phân trang/search/index phù hợp quy mô; đưa workflow hoàn tiền thật và thông báo sang worker có retry; bổ sung rate limit theo nghiệp vụ, quản lý secret, backup/restore, log có request ID và metrics. Các phần này không thay đổi quyền sở hữu và thứ tự khóa đã thống nhất.
+Tối ưu nạp lịch hàng loạt dài hạn và index theo quy mô; phân trang hiện có limit/offset; đưa workflow hoàn tiền thật và thông báo sang worker có retry; bổ sung rate limit theo nghiệp vụ, quản lý secret, backup/restore, log có request ID và metrics. Các phần này không thay đổi quyền sở hữu và thứ tự khóa đã thống nhất.

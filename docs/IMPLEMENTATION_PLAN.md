@@ -1,12 +1,12 @@
 # Kế hoạch phát triển 4 tuần
 
-Kế hoạch chuyển nội dung PDF thành đầu việc có thể giao cho 3 người, cập nhật theo ảnh: bỏ sinh lịch tự động, bảo vệ trạng thái bằng ADMIN và audit, xử lý xung đột sửa thông tin/trạng thái. Base hiện là điểm bắt đầu tích hợp; bảng này dùng để theo dõi hoàn thiện, không tự khẳng định mọi tiêu chí đã nghiệm thu.
+Kế hoạch chuyển PDF thành đầu việc cho 3 người; cập nhật backend ngày 23/11/2026 theo xác nhận mới: có sinh lịch 30 ngày và quyền quản lý thay trạng thái trong cơ sở mình, có audit/version. Phần frontend chỉ là kế hoạch, không được sửa trong đợt backend này. Base hiện là điểm bắt đầu tích hợp; bảng này dùng để theo dõi hoàn thiện, không tự khẳng định mọi tiêu chí đã nghiệm thu.
 
 ## 1. Phân quyền sở hữu mã nguồn
 
 | Người | Thư mục chính | Trách nhiệm |
 |---|---|---|
-| TV1 — Backend Core | `server/src/db`, `config`, `lib`, `middlewares`; modules `auth`, `venues`, `timeslots`, `reviews`, `admin`; Docker/Knex | Schema, migration/seed, RBAC/ownership, metadata/version, status ADMIN/audit, API danh mục và quản trị |
+| TV1 — Backend Core | `server/src/db`, `config`, `lib`, `middlewares`; modules `auth`, `venues`, `timeslots`, `reviews`, `admin`; Docker/Knex | Schema, migration/seed, RBAC/ownership, metadata/version, status manager/admin và audit, API danh mục và quản trị |
 | TV2 — Booking Engine | modules `bookings`, `payments`, `aftersales`; `jobs` | Transaction giữ chỗ, thanh toán idempotent, cron, POS, complete/extend, dời/hoàn |
 | TV3 — Frontend | Toàn bộ `client` | 3 layout, 9 nhóm màn hình, API client, state, form, countdown và xử lý lỗi |
 | Cả nhóm | `docs`, contract, test tích hợp | Chốt JSON và trạng thái, nghiệm thu, cập nhật báo cáo |
@@ -23,13 +23,13 @@ TV1 sở hữu helper khóa/audit dùng chung; TV2 sử dụng, không viết m�
 
 Điểm chốt cuối tuần: chạy fresh clone bằng README; frontend gọi được login và danh mục thật; có API contract, nguồn ERD; manager1 không thể thao tác cơ sở manager2.
 
-## 3. Tuần 2 — timetable cố định, đặt online và thanh toán
+## 3. Tuần 2 — sinh lịch, đặt online và thanh toán
 
 | TV1 | TV2 | TV3 |
 |---|---|---|
 | CRUD metadata venue/court; validation hold 1–10, lead >=10; PATCH với expected_version | Online atomic hold và 409 khi slot đã chiếm; held_until theo cấu hình cơ sở | Danh sách/lọc/chi tiết venue/court; lịch theo ngày và chú giải 4 trạng thái |
-| GET slot theo ngày; không triển khai generate-slots; kiểm tra timetable cố định và chống overlap DB | Payment attempts, sandbox confirm idempotent; deadline kiểm tra ở server; cron nhả hold 30 giây/lần | Checkout nhận deadline từ server; khóa nút khi hết hạn; xử lý confirm success/conflict/expired |
-| ADMIN status venue/court/slot có reason, version, audit và kiểm tra đơn liên quan | Kiểm thử đồng thời booking–booking, payment–expiry và booking–status | Manager metadata form không có field status; xử lý 409 bằng tải lại dữ liệu |
+| GET slot theo ngày; POST generate-slots tối đa 30 ngày, ca 06–22/60 phút, chống overlap và gọi lặp; PATCH giá ca tương lai chưa đặt | Payment attempts, sandbox confirm idempotent; deadline kiểm tra ở server; cron nhả hold 30 giây/lần | Checkout nhận deadline từ server; khóa nút khi hết hạn; xử lý confirm success/conflict/expired |
+| Manager đúng cơ sở/Admin status venue/court/slot có reason, version, audit và kiểm tra đơn liên quan | Kiểm thử đồng thời booking–booking, payment–expiry và booking–status | Form metadata riêng và trạng thái qua endpoint riêng; xử lý 409 bằng tải lại dữ liệu (frontend chưa triển khai trong đợt này) |
 
 Điểm chốt cuối tuần: TC-01 → TC-04 chạy trên PostgreSQL thật. Hai cửa sổ khách cùng đặt chỉ một bên thành công. Cấu hình hold 5 phút trả đúng deadline, 15 phút bị từ chối.
 
@@ -38,7 +38,7 @@ TV1 sở hữu helper khóa/audit dùng chung; TV2 sử dụng, không viết m�
 | TV1 | TV2 | TV3 |
 |---|---|---|
 | Review đúng chủ đơn COMPLETED, unique/rating; admin overview/users/audit | Walk-in bán ca đang chạy; complete idempotent sau end_at; extension ca liền kề | My bookings, POS và nút complete theo thời gian; form review |
-| Review quyền manager theo mọi loại tài nguyên; lọc audit không lộ bí mật | Dời lịch cùng cơ sở/môn/giá, phân biệt slot cũ AVAILABLE/UNAVAILABLE; record lịch sử | Manager venues và requests; không có nút sinh lịch hoặc tự sửa trạng thái |
+| Review quyền manager theo mọi loại tài nguyên; lọc audit không lộ bí mật | Dời lịch cùng cơ sở/môn/giá, phân biệt slot cũ AVAILABLE/UNAVAILABLE; record lịch sử | Manager venues và requests; tích hợp sinh lịch, giá và status có kiểm soát (đầu việc frontend sau) |
 | Hoàn thiện index/constraint và audit coverage | Báo sự cố; refund-request; duyệt → tự PROCESSING → COMPLETED trong transaction | Hiển thị đủ nhãn refund, lựa chọn dời/hoàn chỉ khi có sự cố; xử lý lỗi rollback/conflict |
 
 Điểm chốt cuối tuần: TC-05 → TC-09; không có đơn hoàn thành sớm, không tự refund khi chưa có sự cố, không gia hạn vào ca đã giữ/đặt/khóa.
@@ -63,7 +63,7 @@ TV1 sở hữu helper khóa/audit dùng chung; TV2 sử dụng, không viết m�
 
 ## 7. Những việc cần chốt sau base
 
-1. Quy trình nạp timetable cố định ngoài lịch seed; ảnh yêu cầu bỏ sinh lịch nên không tự thêm lại endpoint cũ.
+1. Tích hợp frontend với API sinh lịch/giá/status mới; backend đã có các endpoint theo PDF mới. Backend đã chạy nghiệm thu 45/45 test ngày 23/11/2026; xem VERIFICATION.md.
 2. Cổng thanh toán thật và chính sách hoàn tiền/đối soát, retry, notification.
 3. Chính sách dời khác giá hoặc khác cơ sở, phí và phân bổ doanh thu.
-4. Phân trang, tìm kiếm, lưu ảnh, vận hành bảo mật, backup và triển khai.
+4. Tối ưu phân trang/tìm kiếm đã có, lưu ảnh, vận hành bảo mật, backup và triển khai.

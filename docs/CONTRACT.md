@@ -9,8 +9,8 @@ Tài liệu nội bộ dùng chung khi dựng base; hướng dẫn đầy đủ 
 - Tiền là integer VND. UUID cho mọi id. `slot_date` YYYY-MM-DD và giờ HH:mm:ss theo Asia/Ho_Chi_Minh; lấy mốc `start_at`/`end_at` qua SQL `(slot_date + start_time) AT TIME ZONE 'Asia/Ho_Chi_Minh'`.
 - Auth: `req.user = { id, full_name, email, role, is_active, token_version }`. Role CUSTOMER / VENUE_MANAGER / ADMIN.
 - Request PATCH thông tin/trạng thái dùng `expected_version` (integer >=1). Giá booking chốt `total_amount` khi tạo đơn.
-- Áp dụng ảnh thay M3: không có endpoint/nút generate-slots, timetable cố định 06–22, 60 phút. Seed nạp lịch demo từ hôm qua đến 30 ngày sau; không có cron sinh lịch.
-- Chỉ ADMIN đổi trạng thái trực tiếp của venue/court/slot, reason bắt buộc, audit trong cùng transaction. Manager không được gửi `status` trong PATCH thông tin.
+- Theo PDF mới đã được xác nhận ngày 23/11/2026: M3 có API sinh lịch 06–22, ca 60 phút, tối đa 30 ngày/lần. Khoảng từ hôm nay đến hôm nay + 30 ngày Việt Nam. Không có cron sinh lịch; cron chỉ quét hết hạn giữ chỗ.
+- Manager đúng cơ sở và ADMIN đổi trạng thái trực tiếp qua endpoint `/status`; reason và expected_version bắt buộc, audit cùng transaction. PATCH metadata vẫn từ chối status.
 - Booking/payment/expire/reschedule/refund vẫn chuyển trạng thái slot theo nghiệp vụ; manager được xử lý sự cố trong phạm vi cơ sở và có audit.
 - Cấm đổi trạng thái bảo trì/ngưng venue/court khi còn đơn PENDING/CONFIRMED chưa kết thúc; trả 409 cần xử lý đơn trước.
 
@@ -41,9 +41,9 @@ Tài liệu nội bộ dùng chung khi dựng base; hướng dẫn đầy đủ 
 
 ## API contracts
 
-Auth: POST /auth/register `{full_name,email,phone?,password}`; POST /auth/login `{email,password}`; POST /auth/logout; GET /auth/me.
+Auth: password 8 ký tự trở lên, tối đa 72 byte UTF-8, không trim; reject vượt giới hạn bcrypt ở cả register/login. POST /auth/register `{full_name,email,phone?,password}`; POST /auth/login `{email,password}`; POST /auth/logout; GET /auth/me.
 Venues: GET /venues `?q=&district=&sport_type=&min_price=&max_price=&mine=true`; GET /venues/:id; POST /venues (manager); PATCH /venues/:id `{expected_version,name?,address?,district?,description?,payment_hold_minutes?,minimum_online_booking_lead_minutes?}`; POST /venues/:id/courts; PATCH /courts/:id info same version; GET /courts/:id; GET /courts/:id/slots?date=YYYY-MM-DD returns slot array with start_at,end_at.
-Admin: GET /admin/overview; GET /admin/users; PATCH /admin/users/:id/status `{is_active?,role?}`; GET /admin/audit-logs; PATCH /admin/venues/:id/status, /admin/courts/:id/status, /admin/slots/:id/status `{status,expected_version,reason}`. No DELETE routes: archive via admin status, preserve historical FKs.
+Admin: GET /admin/overview; GET /admin/users; PATCH /admin/users/:id/status `{is_active?,role?}`; GET /admin/audit-logs; PATCH /admin/venues/:id/status, /admin/courts/:id/status, /admin/slots/:id/status `{status,expected_version,reason}`. DELETE /venues/:id và /courts/:id là xóa mềm INACTIVE (manager đúng cơ sở/admin), body `{expected_version,reason}`; giữ historical FKs.
 Reviews: POST /bookings/:id/reviews `{rating,comment?}`.
 TV2: GET /bookings (own customer or manager's venues; admin all) returns array flattened court_name,venue_name,start_at,end_at,court_id,venue_id,held_until,refund_status,refund_id,review_id,issue_reason and common booking fields. GET /bookings/:id same shape.
 POST /bookings/online `{time_slot_id}` -> booking + held_until.
@@ -56,4 +56,13 @@ POST /bookings/:id/venue-issue `{reason,action:'REPORT'|'REFUND'}` -> booking or
 POST /bookings/:id/refund-request `{}` -> refund only booking owner and issue_reported_at exists.
 PATCH /refunds/:id/status `{status:'APPROVED'|'COMPLETED'}` -> refund; on APPROVED persist APPROVED audit, then auto PROCESSING in same transaction with audit; on COMPLETED from PROCESSING atomically refund payment/cancel booking/slot UNAVAILABLE. Client shows REQUESTED->APPROVED->PROCESSING->COMPLETED via audit and labels.
 
-All API paths relative `/api`. Base includes real core workflows; README must call out sandbox payment, seeded finite timetable, and production integrations still pending.
+M3: POST /venues/:id/generate-slots `{start_date?:YYYY-MM-DD,days?:1..30,court_ids?:UUID[]}`; default start_date = today VN, days = 30. Return `{venue_id,start_date,end_date,court_count,created,skipped}`. Existing windows unchanged. Only ACTIVE courts of owned ACTIVE venue. PATCH /slots/:id `{expected_version,price}` for unstarted AVAILABLE/UNAVAILABLE slots without active booking.
+Manager status: PATCH /venues/:id/status, /courts/:id/status, /slots/:id/status with same body/guards as ADMIN endpoints. CUSTOMER forbidden; other manager forbidden. Metadata status fields still forbidden.
+GET /venues/:id/courts supports sport_type, min_price, max_price and pagination. Public/customer listing hides inactive courts.
+GET /bookings/:id/history -> `{booking,payments,reschedules,refund,review}`; same ownership as detail. GET /refunds and /refunds/:id scoped to booking owner or venue manager/admin. List filters and pagination in API.md.
+List responses keep `data` as an array. `limit` integer 1..300 default 100; `offset` integer 0..1000000 default 0. Fetch next page using offset + limit; an empty page marks exhaustion. No total-count field is promised.
+Payment winner closes other PENDING attempts as FAILED atomically. Final HELD→BOOKED UPDATE requires held_until > clock_timestamp(); if the deadline passed since the initial read, roll back the whole payment transaction and return HOLD_EXPIRED. Repeated refund-request returns the same refund, including after completion.
+
+All API paths relative `/api`. Sandbox payment/refund and production integrations remain limitations. Backend-only revision; existing frontend has not been changed.
+
+Booking list/detail/history return held_until only for PENDING + HELD. Expired/historical bookings must never display a replacement customer's hold deadline.

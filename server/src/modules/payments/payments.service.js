@@ -73,17 +73,26 @@ export async function confirmPayment(user, input) {
       .where({ id: payment.id })
       .update({ status: 'PAID', updated_at: trx.fn.now() })
       .returning('*');
+    // A successful attempt closes all alternatives. They must not remain
+    // apparently payable after the booking was confirmed.
+    await trx('payments').where({ booking_id: context.booking.id, status: 'PENDING' })
+      .whereNot({ id: payment.id }).update({ status: 'FAILED', updated_at: trx.fn.now() });
     await trx('bookings')
       .where({ id: context.booking.id })
       .update({ status: 'CONFIRMED', updated_at: trx.fn.now() });
-    await trx('time_slots')
+    // Check the deadline at the actual state transition as well. The clock
+    // captured in lockBooking may be stale after database/payment work.
+    const reserved = await trx('time_slots')
       .where({ id: context.slot.id, status: 'HELD' })
+      .where('held_until', '>', trx.raw('clock_timestamp()'))
       .update({
         status: 'BOOKED',
         held_until: null,
         version: trx.raw('version + 1'),
         updated_at: trx.fn.now(),
       });
+    if (reserved !== 1)
+      throw conflict('HOLD_EXPIRED', 'Thời gian giữ chỗ đã hết trước khi xác nhận thanh toán.');
     await writeAudit(trx, {
       actorId: user.id,
       action: 'PAYMENT_CONFIRMED_SANDBOX',

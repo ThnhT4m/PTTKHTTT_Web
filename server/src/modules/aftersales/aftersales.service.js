@@ -31,6 +31,33 @@ function confirmed(booking) {
   }
 }
 
+function refundQuery() {
+  return db('refunds as r').join('bookings as b', 'b.id', 'r.booking_id')
+    .join('time_slots as s', 's.id', 'b.time_slot_id')
+    .join('courts as c', 'c.id', 's.court_id')
+    .join('sport_venues as v', 'v.id', 'c.venue_id')
+    .select('r.*', 'b.customer_id', 'b.customer_name', 'v.manager_id',
+      'v.id as venue_id', 'v.name as venue_name', 'c.name as court_name');
+}
+
+export async function listRefunds(user, filters = {}) {
+  const query = refundQuery().orderBy('r.created_at', 'desc').orderBy('r.id')
+    .limit(filters.limit ?? 100).offset(filters.offset ?? 0);
+  if (user.role === 'CUSTOMER') query.where('b.customer_id', user.id);
+  if (user.role === 'VENUE_MANAGER') query.where('v.manager_id', user.id);
+  if (filters.status) query.where('r.status', filters.status);
+  if (filters.venue_id) query.where('v.id', filters.venue_id);
+  if (filters.booking_id) query.where('b.id', filters.booking_id);
+  return query;
+}
+
+export async function getRefund(user, id) {
+  const refund = await refundQuery().where('r.id', id).first();
+  if (!refund) throw new AppError(404, 'REFUND_NOT_FOUND', 'Không tìm thấy yêu cầu hoàn tiền.');
+  authorize(user, refund, refund);
+  return refund;
+}
+
 async function activeRefund(trx, bookingId) {
   return trx('refunds').where({ booking_id: bookingId }).forUpdate().first();
 }
@@ -248,7 +275,6 @@ export async function requestRefund(user, id) {
     if (user.role !== 'CUSTOMER' || booking.customer_id !== user.id) {
       throw new AppError(403, 'FORBIDDEN', 'Chỉ chủ đơn được gửi yêu cầu hoàn tiền này.');
     }
-    confirmed(booking);
     if (!booking.issue_reported_at) {
       throw new AppError(
         409,
@@ -256,6 +282,9 @@ export async function requestRefund(user, id) {
         'Khách chỉ được yêu cầu hoàn tiền sau khi cơ sở báo sự cố sân.',
       );
     }
+    const existing = await activeRefund(trx, booking.id);
+    if (existing) return existing;
+    confirmed(booking);
     return createRefundUnderLock(trx, user, booking);
   });
 }

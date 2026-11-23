@@ -11,7 +11,7 @@ export async function list(filters, user) {
   return repository.listVenues(filters, user);
 }
 
-export async function detail(id, user) {
+async function accessibleVenue(id, user) {
   const venue = await repository.venueById(id);
   if (!venue) throw new AppError(404, 'VENUE_NOT_FOUND', 'Không tìm thấy cơ sở.');
   if (
@@ -20,7 +20,21 @@ export async function detail(id, user) {
     !(user?.role === 'VENUE_MANAGER' && user.id === venue.manager_id)
   )
     throw new AppError(404, 'VENUE_NOT_FOUND', 'Cơ sở đang ngưng phục vụ.');
-  return { ...venue, courts: await repository.courtsForVenue(id) };
+  return venue;
+}
+
+export async function detail(id, user) {
+  const venue = await accessibleVenue(id, user);
+  const privileged = user?.role === 'ADMIN' ||
+    (user?.role === 'VENUE_MANAGER' && user.id === venue.manager_id);
+  return { ...venue, courts: await repository.courtsForVenue(id, { activeOnly: !privileged }) };
+}
+
+export async function listCourts(id, filters, user) {
+  const venue = await accessibleVenue(id, user);
+  const privileged = user?.role === 'ADMIN' ||
+    (user?.role === 'VENUE_MANAGER' && user.id === venue.manager_id);
+  return repository.courtsForVenue(id, { ...filters, activeOnly: !privileged });
 }
 
 export async function courtDetail(id, user) {
@@ -37,6 +51,11 @@ export async function courtDetail(id, user) {
 
 export async function createVenue(input, user) {
   return db.transaction(async (trx) => {
+    // Serialize with ADMIN role changes: a demoted manager must not create
+    // a venue using a request authenticated before the change committed.
+    const actor = await trx('users').where({ id: user.id }).forUpdate().first();
+    if (!actor?.is_active || !['VENUE_MANAGER', 'ADMIN'].includes(actor.role))
+      throw new AppError(403, 'FORBIDDEN', 'Tài khoản không còn quyền tạo cơ sở.');
     const [venue] = await trx('sport_venues')
       .insert({ ...input, manager_id: user.id, status: 'ACTIVE' })
       .returning('*');

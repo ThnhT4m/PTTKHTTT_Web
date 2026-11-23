@@ -2,6 +2,7 @@ import { db } from '../../db/knex.js';
 import { AppError } from '../../lib/http.js';
 import { writeAudit } from '../../lib/audit.js';
 import { lockVenueCourts, lockSlots } from '../../lib/locking.js';
+import { assertVenueOwner } from '../../middlewares/venueOwner.js';
 
 export async function overview() {
   const [[venues], [bookings], [revenue], [users]] = await Promise.all([
@@ -18,18 +19,28 @@ export async function overview() {
   };
 }
 
-export const listUsers = () =>
-  db('users')
+export const listUsers = ({ limit = 100, offset = 0, q, role, is_active } = {}) => {
+  const query = db('users')
     .select('id', 'full_name', 'email', 'phone', 'role', 'is_active', 'created_at')
     .orderBy('created_at', 'desc')
-    .limit(200);
-export const listAudit = () =>
-  db('audit_logs as a')
+    .orderBy('id').limit(limit).offset(offset);
+  if (q) query.where((b) => b.whereILike('full_name', `%${q}%`).orWhereILike('email', `%${q}%`));
+  if (role) query.where({ role });
+  if (is_active !== undefined) query.where({ is_active });
+  return query;
+};
+export const listAudit = ({ limit = 100, offset = 0, actor_id, entity_id, action } = {}) => {
+  const query = db('audit_logs as a')
     .leftJoin('users as u', 'u.id', 'a.actor_id')
     .select('a.*', 'u.full_name as actor_name')
     .orderBy('a.created_at', 'desc')
     .orderBy('a.id', 'desc')
-    .limit(100);
+    .limit(limit).offset(offset);
+  if (actor_id) query.where('a.actor_id', actor_id);
+  if (entity_id) query.where('a.entity_id', entity_id);
+  if (action) query.where('a.action', action);
+  return query;
+};
 
 export async function updateUser(id, input, actor) {
   return db.transaction(async (trx) => {
@@ -94,6 +105,7 @@ export async function setVenueStatus(id, input, actor) {
   return db.transaction(async (trx) => {
     const before = await trx('sport_venues').where({ id }).forUpdate().first();
     if (!before) throw new AppError(404, 'VENUE_NOT_FOUND', 'Không tìm thấy cơ sở.');
+    assertVenueOwner(actor, before);
     expected(before, input.expected_version);
     const courts = await trx('courts').where({ venue_id: id }).orderBy('id').forUpdate();
     if (input.status !== 'ACTIVE')
@@ -121,6 +133,7 @@ export async function setVenueStatus(id, input, actor) {
 export async function setCourtStatus(id, input, actor) {
   return db.transaction(async (trx) => {
     const [before] = await lockVenueCourts(trx, [id]);
+    assertVenueOwner(actor, before);
     expected(before, input.expected_version);
     if (input.status !== 'ACTIVE') await assertNoOpenBookings(trx, [id]);
     const [after] = await trx('courts')
@@ -144,7 +157,8 @@ export async function setSlotStatus(id, input, actor) {
   return db.transaction(async (trx) => {
     const preliminary = await trx('time_slots').where({ id }).first();
     if (!preliminary) throw new AppError(404, 'SLOT_NOT_FOUND', 'Không tìm thấy khung giờ.');
-    await lockVenueCourts(trx, [preliminary.court_id]);
+    const [court] = await lockVenueCourts(trx, [preliminary.court_id]);
+    assertVenueOwner(actor, court);
     const [before] = await lockSlots(trx, [id]);
     expected(before, input.expected_version);
     if (

@@ -3,12 +3,15 @@ import { z } from 'zod';
 import { asyncHandler, ok } from '../../lib/http.js';
 import { requireAuth, requireRole } from '../../middlewares/auth.js';
 import * as service from './venues.service.js';
+import * as statusService from '../admin/admin.service.js';
+import {
+  pagination, priceFilters, validPriceRange, operationalStatuses, statusBody, sport, reason,
+} from '../../lib/validation.js';
 
 const router = Router();
 const optionalAuth = (req, res, next) =>
   req.headers.authorization ? requireAuth(req, res, next) : next();
 const manager = [requireAuth, requireRole(['VENUE_MANAGER', 'ADMIN'])];
-const sport = z.enum(['FOOTBALL', 'BADMINTON', 'TENNIS', 'PICKLEBALL', 'BASKETBALL']);
 const venueFields = {
   name: z.string().trim().min(2).max(150),
   address: z.string().trim().min(3).max(300),
@@ -43,18 +46,27 @@ router.get(
   asyncHandler(async (req, res) => {
     const filters = z
       .object({
+        ...pagination,
         q: z.string().max(100).optional(),
         district: z.string().max(100).optional(),
         sport_type: sport.optional(),
-        min_price: z.coerce.number().int().min(0).optional(),
-        max_price: z.coerce.number().int().min(0).optional(),
+        ...priceFilters,
         mine: z
           .enum(['true', 'false'])
           .transform((value) => value === 'true')
           .optional(),
       })
-      .parse(req.query);
+      .strict().refine(validPriceRange, 'min_price phải nhỏ hơn hoặc bằng max_price.').parse(req.query);
     ok(res, await service.list(filters, req.user));
+  }),
+);
+router.get(
+  '/venues/:id/courts',
+  optionalAuth,
+  asyncHandler(async (req, res) => {
+    const filters = z.object({ ...pagination, ...priceFilters, sport_type: sport.optional() })
+      .strict().refine(validPriceRange, 'min_price phải nhỏ hơn hoặc bằng max_price.').parse(req.query);
+    ok(res, await service.listCourts(z.string().uuid().parse(req.params.id), filters, req.user));
   }),
 );
 router.get(
@@ -121,4 +133,20 @@ router.patch(
     ),
   ),
 );
+// Keep privileged state edits separate from metadata PATCH, with the same
+// version, booking guards and audit transaction for managers and admins.
+for (const [entity, handler] of [
+  ['venues', statusService.setVenueStatus], ['courts', statusService.setCourtStatus],
+]) {
+  router.patch(`/${entity}/:id/status`, ...manager, asyncHandler(async (req, res) =>
+    ok(res, await handler(z.string().uuid().parse(req.params.id),
+      statusBody(operationalStatuses).parse(req.body), req.user))));
+  // Soft deletion preserves foreign keys and booking/payment history.
+  router.delete(`/${entity}/:id`, ...manager, asyncHandler(async (req, res) => {
+    const input = z.object({ expected_version: z.number().int().positive(),
+      reason }).strict().parse(req.body);
+    ok(res, await handler(z.string().uuid().parse(req.params.id),
+      { ...input, status: 'INACTIVE' }, req.user));
+  }));
+}
 export default router;

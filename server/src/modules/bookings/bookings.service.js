@@ -27,11 +27,30 @@ async function lockSlotContext(trx, snapshot) {
   return { court, slot, now: await databaseNow(trx) };
 }
 
-export async function listBookings(user) {
-  const query = bookingDetailsQuery(db).orderBy('b.created_at', 'desc').limit(300);
+export async function listBookings(user, filters = {}) {
+  const query = bookingDetailsQuery(db).orderBy('b.created_at', 'desc').orderBy('b.id')
+    .limit(filters.limit ?? 100).offset(filters.offset ?? 0);
   if (user.role === 'CUSTOMER') query.where('b.customer_id', user.id);
   if (user.role === 'VENUE_MANAGER') query.where('v.manager_id', user.id);
+  for (const key of ['status', 'source']) if (filters[key]) query.where(`b.${key}`, filters[key]);
+  if (filters.venue_id) query.where('v.id', filters.venue_id);
+  if (filters.court_id) query.where('c.id', filters.court_id);
+  if (filters.date) query.where('s.slot_date', filters.date);
+  if (filters.refund_status) query.where('r.status', filters.refund_status);
+  if (filters.has_issue === true) query.whereNotNull('b.issue_reported_at');
+  if (filters.has_issue === false) query.whereNull('b.issue_reported_at');
   return query;
+}
+
+export async function getBookingHistory(user, id) {
+  const booking = await getBooking(user, id);
+  const [payments, reschedules, refund, review] = await Promise.all([
+    db('payments').where({ booking_id: id }).orderBy('created_at').orderBy('id'),
+    db('booking_reschedules').where({ booking_id: id }).orderBy('created_at').orderBy('id'),
+    db('refunds').where({ booking_id: id }).first(),
+    db('reviews').where({ booking_id: id }).first(),
+  ]);
+  return { booking, payments, reschedules, refund: refund ?? null, review: review ?? null };
 }
 
 export async function getBooking(user, id) {
@@ -77,6 +96,9 @@ export async function bookOnline(user, input) {
         total_amount: slot.price,
       })
       .returning('*');
+    await writeAudit(trx, { actorId: user.id, action: 'BOOKING_HELD',
+      entityType: 'bookings', entityId: booking.id,
+      after: { time_slot_id: slot.id, status: booking.status, held_until: held.held_until } });
     return {
       ...booking,
       held_until: held.held_until,

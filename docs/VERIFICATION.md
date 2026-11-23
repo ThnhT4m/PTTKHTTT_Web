@@ -1,45 +1,50 @@
-# Kết quả kiểm chứng base
+# Nghiệm thu backend — 23/11/2026
 
-Ngày chạy: 17/11/2026, múi giờ Việt Nam. Môi trường thực tế: Node.js 24.22.1, npm 11.9.0, PostgreSQL 16 trong Docker. Yêu cầu tối thiểu trong source là Node.js 22; lần kiểm chứng này dùng Node.js 24.
+**Kết quả cuối: 45/45 test đạt, 0 fail, 0 cancelled, 0 skipped, 0 todo**, gồm **38 test tích hợp HTTP/PostgreSQL và 7 unit test**. Mã backend hiện tại đã được kiểm chứng sau cả ba sửa lỗi bổ sung cuối cùng.
 
-## Đã chạy thành công
+Đã đối chiếu log chạy `npm run verify:backend` từ Terminal máy người dùng. Bắt đầu **16:23:05 ngày 23/11/2026, giờ Việt Nam** (09:23:05 UTC), kết thúc khoảng 16:23:33. Toàn quy trình 27,8 giây; phần test 11.203,260397 ms. Môi trường: Node.js v24.18.0, Docker Engine 29.9.3, PostgreSQL image `postgres:16-alpine`, database riêng `sportbooking_test` tại 127.0.0.1:5432.
 
-| Kiểm tra | Kết quả |
+| Kiểm tra | Kết quả đã ghi nhận |
 |---|---|
-| Cài dependency workspace | Thành công; có `package-lock.json` để cài lại bằng `npm ci`. |
-| `npm run db:migrate` | Thành công 1 migration: 10 bảng nghiệp vụ/audit, các FK, CHECK, unique/partial index và exclusion constraint. |
-| `npm run db:seed` | Thành công: 5 tài khoản, 3 cơ sở, 6 sân, 3.072 slot cố định. |
-| `npm test` | **17 pass, 0 fail, 0 skip**, dùng PostgreSQL thật tại database riêng `sportbooking_test`. |
-| `npm run build` | Vite build thành công, 1.605 module; xuất `client/dist`. |
-| `GET /api/health` trực tiếp và qua Vite proxy | HTTP 200, truy vấn database thành công. |
-| Kiểm tra cú pháp server / biên dịch JSX | Thành công. |
+| `npm ping` | PONG; kết nối registry thành công. |
+| `docker info` | Docker daemon truy cập được, Server 29.9.3. |
+| `npm ci --workspace server --ignore-scripts --no-audit --no-fund` | Cài 152 package thành công. |
+| `docker compose up -d --wait db` | PostgreSQL healthy. |
+| Database test | Database `_test` tồn tại; suite migrate/seed và chạy truy vấn thực. |
+| `npm run check:server` | **43 file JavaScript hợp lệ.** |
+| `npm test` | **45 pass, 0 fail, 0 skip.** |
+| Frontend | Không sửa thư mục client; không build/kiểm thử UI trong phạm vi backend này. |
 
-## Các tình huống tự động đã đạt
+Bằng chứng cuối: [backend-verification-2026-11-23-final.txt](backend-verification-2026-11-23-final.txt), bản sao nguyên trạng log vừa đối chiếu. SHA-256: `6eae77d084817c4ba17cd99acd2aa48952fe1788407d23e6ac2cf82f134aa776`. File root `backend-verification.log` bị Git bỏ qua theo `*.log`; bản `.txt` trong docs được giữ để push cùng source. [Log 38 test trước đợt sửa cuối](backend-verification-2026-11-23.txt) chỉ là bằng chứng lịch sử, không phải kết quả hiện tại.
 
-1. API riêng tư yêu cầu JWT; không tự đăng ký ADMIN; customer không vào API admin.
-2. TC-01: hai customer giữ cùng slot đồng thời, một thành công và một lỗi 409.
-3. TC-02: job hết hạn đổi booking EXPIRED và slot AVAILABLE, xóa held_until.
-4. TC-03: xác nhận thanh toán đồng thời cùng transaction_code an toàn, chỉ một payment PAID; booking CONFIRMED, slot BOOKED.
-5. TC-04: thời hạn giữ đúng cấu hình 5 phút; cấu hình 15 bị từ chối; ca không đạt lead time bị từ chối.
-6. TC-05: walk-in cho ca đang diễn ra, có payment tại quầy.
-7. TC-06: gia hạn bị từ chối khi ca liền kề đang HELD, không tạo booking con.
-8. TC-07: dời tự nguyện mở lại slot cũ; customer không tự hủy hoặc đòi hoàn tiền khi chưa báo sự cố.
-9. TC-07 bổ sung: dời sau báo sự cố giữ slot cũ UNAVAILABLE.
-10. TC-08: không được nhảy thẳng REQUESTED sang COMPLETED; duyệt tự đi qua APPROVED/PROCESSING có audit; hoàn thành cập nhật đồng thời payment/booking/slot.
-11. TC-09: chỉ complete sau giờ kết thúc; gọi complete lặp an toàn; chỉ chủ đơn COMPLETED đánh giá và tối đa một lần.
-12. TC-10: manager khác cơ sở không sửa sân, tạo walk-in hoặc báo sự cố đơn của cơ sở khác.
-13. Manager không gửi status qua PATCH thông tin, không gọi API admin; endpoint generate-slots không tồn tại.
-14. Hai PATCH cùng version: một thành công, một EDIT_CONFLICT; version chỉ tăng một lần.
-15. ADMIN khóa sân đồng thời customer đặt: chỉ một thao tác thành công; không có booking hợp lệ trong sân đã bị khóa.
-16. Callback quá hạn không chiếm lại slot đã được người khác giữ.
-17. ADMIN đổi trạng thái bắt buộc lý do và ghi đúng actor, dữ liệu trước/sau trong audit.
+## Phạm vi đã đạt
 
-Test TC-05 phụ thuộc giờ mở cửa tại Việt Nam (06:00–22:00). Suite sẽ ghi skip nếu được chạy ngoài khoảng này; lần chạy bàn giao không có skip. Các test trên là những tình huống cụ thể, chưa phải kiểm thử tải hoặc chứng minh mọi tổ hợp cạnh tranh. Danh sách nghiệm thu rộng hơn và thao tác thủ công nằm trong [ACCEPTANCE.md](ACCEPTANCE.md).
+- TC-01 → TC-10: atomic hold/race condition, hết hạn, thanh toán idempotent, hold/lead time, walk-in ca đang chạy, gia hạn, dời lịch tự nguyện/sự cố, chuỗi hoàn tiền, complete/review và cách ly quyền sở hữu.
+- M3: đủ 30 ngày với 16 ca/ngày 06–22; gọi lặp/đồng thời không trùng và không ghi đè giá/hold; giới hạn ngày/sân/ownership; chỉnh giá/version và bảo vệ slot HELD/BOOKED.
+- Manager đổi trạng thái đúng cơ sở; xóa mềm giữ lịch sử; từ chối customer/manager khác; khách không thấy sân ngưng phục vụ.
+- Nhiều payment attempts chỉ một PAID, các attempt còn lại FAILED; confirm quá hạn bị chặn dù cron chưa chạy; expire đồng thời không xử lý trùng.
+- Gia hạn thành công có booking con/payment; complete sớm bị chặn; hai đơn dời cùng đích chỉ một thắng và bên thua rollback; refund/reschedule loại trừ nhau khi cạnh tranh.
+- List/detail/history/refund có scope; phân trang/lọc không vượt quyền; retry yêu cầu hoàn hoặc hoàn tất không ghi trùng.
+- Logout/khóa/cấp quyền thu hồi token; không trả password_hash/token_version trong user/audit; JSON hỏng/quá lớn giữ envelope.
+- Constraint PostgreSQL chặn trùng/sai ca, HELD thiếu deadline, payment PAID trùng. Lỗi ghi audit/lịch sử dời rollback cả dữ liệu liên quan.
+- Ba sửa lỗi cuối đã có test hồi quy pass: mật khẩu UTF-8 chạm/vượt 72 byte bcrypt; booking EXPIRED không nhận deadline của khách đặt sau; deadline được kiểm tra lại ngay tại UPDATE BOOKED, rollback payment/booking/slot/alternative attempt khi quá hạn trong lúc xử lý.
+- Bảy unit test kiểm tra giới hạn bcrypt, UTF-8/emoji, validation đăng ký/đăng nhập, không trim mật khẩu, chặn tự cấp quyền, ngày Việt Nam, ngày nhuận và lịch 30 ngày.
 
-## Giới hạn kiểm chứng
+Hai thông báo `forced audit failure` và `forced reschedule history failure` là lỗi được tạo chủ đích bằng trigger trong database test. Các test xác nhận HTTP 500 và rollback đã **pass**; không có lỗi kiểm thử còn mở trong lần chạy cuối. Test deadline dùng fault injection trong DB, không dựa vào sleep hoặc tốc độ máy.
 
-Đã thử mở frontend bằng Cloud browser. Môi trường trình duyệt chặn thao tác bởi chính sách URL nên chưa thực hiện được nghiệm thu tương tác UI cho 9 nhóm màn hình. HTTP server/proxy và build vẫn đã được kiểm tra độc lập; không coi hai kiểm tra đó là bằng chứng UI hoạt động đầy đủ. Nhóm cần chạy lại luồng UI trong trình duyệt local theo ACCEPTANCE.md.
+## Chạy lại
 
-Postman collection là bộ request thao tác thủ công, chưa chạy toàn bộ như một collection runner. Cần đăng nhập lại theo role, chọn slot/ngày hợp lệ và cập nhật expected_version trước thao tác sửa.
+```bash
+npm run verify:backend
+```
 
-Thanh toán/hoàn tiền chỉ ghi nhận sandbox và xác nhận nghiệp vụ tại quầy, không giao dịch tiền thật. Chưa triển khai lên hosting và chưa tích hợp nhà cung cấp thanh toán, email/SMS hoặc vận hành production.
+Lệnh kiểm tra npm/Docker, cài dependency workspace server, khởi động PostgreSQL, tạo database test nếu cần và chạy kiểm tra cú pháp/test. Không reset database phát triển. Có thể đặt TEST_DATABASE_URL cho PostgreSQL ngoài Docker; tên database bắt buộc kết thúc `_test`, dữ liệu test sẽ được migrate/seed lại. Khi sửa code backend, chạy lại suite trước khi dùng kết quả này làm bằng chứng cho phiên bản mới.
+
+## Giới hạn phạm vi
+
+- Đã hoàn thiện backend M1–M12 theo PDF mới và kiểm chứng các tình huống trong suite. Đây chưa phải kiểm thử tải hoặc chứng minh mọi tổ hợp concurrency.
+- Thanh toán/hoàn tiền vẫn là sandbox cho demo; chưa nối cổng tiền thật, đối soát hoặc triển khai production. Dời sân hiện cùng cơ sở/môn/giá.
+- Frontend không sửa theo yêu cầu; UI và Postman collection runner chưa được nghiệm thu. API mới, request mẫu và quy tắc trạng thái đã có trong API.md/CONTRACT.md.
+- TC-05 cần ca đang diễn ra trong giờ Việt Nam 06–22. Lần cuối đã pass, không skip; chạy ngoài giờ có thể skip test này.
+
+Phiên AI vẫn bị giới hạn truy cập Docker/PostgreSQL, nhưng kiểm thử trên Terminal máy đã hoàn tất và log đã được đối chiếu. Không còn yêu cầu chạy lại đang chờ cho phiên bản backend này.

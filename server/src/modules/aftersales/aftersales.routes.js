@@ -7,7 +7,9 @@ import {
   reportVenueIssue,
   requestRefund,
   changeRefundStatus,
+  listRefunds, getRefund,
 } from './aftersales.service.js';
+import { pagination } from '../../lib/validation.js';
 
 const router = Router();
 const idSchema = z.string().uuid();
@@ -21,6 +23,15 @@ const issueSchema = z
 const refundStatusSchema = z.object({ status: z.enum(['APPROVED', 'COMPLETED']) }).strict();
 
 router.use(['/bookings', '/refunds'], requireAuth);
+router.get('/refunds', asyncHandler(async (req, res) => {
+  const filters = z.object({ ...pagination,
+    status: z.enum(['REQUESTED', 'APPROVED', 'PROCESSING', 'COMPLETED']).optional(),
+    venue_id: idSchema.optional(), booking_id: idSchema.optional(),
+  }).strict().parse(req.query);
+  ok(res, await listRefunds(req.user, filters));
+}));
+router.get('/refunds/:id', asyncHandler(async (req, res) =>
+  ok(res, await getRefund(req.user, idSchema.parse(req.params.id)))));
 router.post(
   '/bookings/:id/reschedule',
   asyncHandler(async (req, res) => {

@@ -1,6 +1,6 @@
 # Kịch bản nghiệm thu
 
-Tài liệu mô tả điều kiện phải đạt. Chỉ đánh dấu pass khi đã chạy và có bằng chứng; không mặc định toàn bộ tính năng đã được nghiệm thu vì mã nguồn tồn tại. Tạo `sportbooking_test` một lần bằng `docker compose exec -T db createdb -U sportbooking sportbooking_test`, sau đó chạy test tự động tại root bằng `npm test`. Có thể cấu hình `TEST_DATABASE_URL` với tên database kết thúc `_test`; suite tự migrate/seed và reset dữ liệu test. Test giao dịch cần PostgreSQL thật và cơ sở dữ liệu kiểm thử riêng. Build frontend là `npm run build`.
+Tài liệu mô tả điều kiện phải đạt. Chỉ đánh dấu pass khi đã chạy và có bằng chứng; không mặc định toàn bộ tính năng đã được nghiệm thu vì mã nguồn tồn tại. Tạo `sportbooking_test` một lần bằng `docker compose exec -T db createdb -U sportbooking sportbooking_test`, sau đó chạy test tự động tại root bằng `npm test`. Có thể cấu hình `TEST_DATABASE_URL` với tên database kết thúc `_test`; suite tự migrate/seed và reset dữ liệu test. Test giao dịch cần PostgreSQL thật và cơ sở dữ liệu kiểm thử riêng. Đợt này chỉ nghiệm thu backend; `npm run test:unit` kiểm tra lịch không cần DB, `npm run check:server` kiểm tra cú pháp. Frontend nằm ngoài phạm vi thay đổi.
 
 ## Chuẩn bị
 
@@ -99,11 +99,11 @@ Dùng manager1 với venue/court/slot/booking/refund thuộc Bình Thạnh của
 
 Kỳ vọng: mutation ngoài phạm vi trả 403 và không đổi DB. List quản lý chỉ gồm dữ liệu được phép. ADMIN vẫn được truy cập nhưng phải giữ mọi ràng buộc nghiệp vụ. Đổi ID trong URL/body không vượt ownership.
 
-## Kiểm thử bổ sung từ ảnh
+## Kiểm thử bổ sung theo PDF mới và kiểm soát dữ liệu
 
 | Mã | Cách chạy | Kỳ vọng |
 |---|---|---|
-| TC-11: trạng thái được bảo vệ | Manager PATCH metadata kèm status; gọi API admin status | Bị từ chối, DB/audit không có thay đổi thành công |
+| TC-11: trạng thái theo quyền | Manager PATCH metadata kèm status/gọi API admin bị từ chối; gọi `/courts/:id/status` của mình hợp lệ, cơ sở khác 403 | Version/reason/audit và guard booking áp dụng cho cả manager/admin |
 | TC-12: admin audit | ADMIN đổi trạng thái hợp lệ với reason và version hiện tại; thử thiếu reason | Hợp lệ tăng version và có actor/before/after/reason; thiếu lý do trả 400 |
 | TC-13: lost update | Hai request PATCH metadata hoặc status dùng cùng expected_version | Một thành công, một 409, không ghi đè; kết quả đúng payload thắng |
 | TC-14: booking và đóng sân đồng thời | Customer hold slot đồng thời admin ngưng/bảo trì court/venue | Không có đơn mới trên sân đã bị đóng; hoặc hold thắng và status bị từ chối do đơn, hoặc status thắng và booking bị từ chối |
@@ -112,7 +112,7 @@ Kỳ vọng: mutation ngoài phạm vi trả 403 và không đổi DB. List qu�
 | TC-17: thay đổi slot khi reschedule | Hai luồng dời cùng booking hoặc hai booking về cùng đích | Không ghi nhầm slot cũ; tối đa một đơn chiếm đích; bên thua 409 |
 | TC-18: tài khoản khóa/logout | Login, logout rồi dùng token cũ; khóa user rồi dùng token đang có | Token cũ/khóa bị từ chối, không chỉ ẩn nút frontend |
 | TC-19: DB constraints | Insert fixture overlap, ca sai 60 phút, hold null khi HELD, payment PAID trùng | PostgreSQL từ chối; giao dịch rollback |
-| TC-20: timetable hữu hạn | GET ngày ngoài phạm vi seed; kiểm tra UI/routes | Trạng thái trống rõ ràng; không tự sinh thêm lịch, không có nút/API generate |
+| TC-20: sinh lịch M3 | Sân mới sinh 30 ngày, gọi lặp/đồng thời; ngày quá hạn, sân sai cơ sở | 480 ca/sân, 16 ca/ngày 06–22; không trùng/ghi đè; phạm vi ngày/ownership được kiểm tra |
 | TC-21: giá snapshot | Tạo booking rồi đổi giá metadata court | Giá slot đã seed và total_amount/payment amount của booking cũ không đổi |
 | TC-22: bí mật và auth | Đọc API admin/user/audit; thử payment confirm bằng customer khác/tắt sandbox | Không trả password/token hash; không confirm trái quyền hoặc khi sandbox tắt |
 
@@ -122,7 +122,7 @@ Kỳ vọng: mutation ngoài phạm vi trả 403 và không đổi DB. List qu�
 - Có loading, empty và lỗi mạng; không treo nút sau 400/401/403/409.
 - AVAILABLE xanh lá, HELD vàng cam, BOOKED xanh/tím, UNAVAILABLE xám; có nhãn chữ để không chỉ dựa màu.
 - Reload checkout vẫn dùng deadline backend; hết giờ khóa thanh toán, không reset bộ đếm.
-- Form manager không có trường sửa status và nút sinh lịch.
+- Frontend chưa sửa trong đợt này. Sau khi tích hợp: form manager gọi sinh lịch và endpoint status riêng, gửi reason/version; không gộp status vào PATCH metadata.
 - Khi 409 do version cũ, giao diện tải/cho tải lại dữ liệu, không tự gửi lại đè thay đổi.
 - Nhãn refund thống nhất: Chờ duyệt / Đã duyệt / Đang hoàn tiền / Đã hoàn tiền.
 - Form review chỉ xuất hiện sau complete; backend vẫn kiểm tra khi gửi thủ công.
@@ -131,7 +131,9 @@ Kỳ vọng: mutation ngoài phạm vi trả 403 và không đổi DB. List qu�
 
 | Mã | Commit / môi trường | Ngày chạy | Kết quả | Bằng chứng | Người chạy |
 |---|---|---|---|---|---|
-| TC-01 | Điền khi chạy | — | Chưa ghi nhận | — | — |
-| TC-02 → TC-22 | Điền từng dòng khi chạy | — | Chưa ghi nhận | — | — |
+| TC-01 → TC-10 | Node 24.18.0, PostgreSQL 16/Docker 29.9.3; source backend trong repo tại lần chạy | 23/11/2026, 16:23 Việt Nam | Pass tự động, TC-05 không skip | backend-verification-2026-11-23-final.txt | Terminal người dùng; trợ lý đối chiếu log |
+| TC-11 → TC-22 và mở rộng | Đã chạy các test cụ thể tương ứng trong suite 38 integration test | 23/11/2026 | Xem tên từng test trong log; chưa đánh dấu pass mọi bước kiểm thử thủ công/tổ hợp ngoài suite | VERIFICATION.md | Trợ lý đối chiếu log |
+
+Bản cuối đã chạy **45 pass, 0 fail, 0 skip**, gồm **38 HTTP/PostgreSQL test và 7 unit test**. Ba test hồi quy sau lần 38 test đã pass; hai lỗi cố ý tạo để kiểm tra rollback cũng có test tương ứng pass. Xem [VERIFICATION.md](VERIFICATION.md) và [log cuối](backend-verification-2026-11-23-final.txt). Kết quả tự động chỉ áp dụng cho tình huống đã có trong suite, không thay cho nghiệm thu UI hoặc mọi bước thủ công ở trên.
 
 Nếu có kiểm thử tự động mới, liên kết tên test tương ứng và ghi phạm vi: unit, HTTP integration hay PostgreSQL concurrency. Không báo pass các bước thủ công chưa thực hiện.
