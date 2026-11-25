@@ -4,6 +4,8 @@ import { CreditCard, Landmark, Wallet, ShieldCheck, CheckCircle2 } from 'lucide-
 import { get, post } from '../../api/client';
 import { BookingSummary, PageHeader, Loading, Notice, StatusBadge } from '../../components/shared';
 export default function CheckoutPage() {
+  // TASK 6 will enable this after payment integration and acceptance.
+  const paymentEnabled = false;
   const { bookingId } = useParams();
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState('');
@@ -11,9 +13,16 @@ export default function CheckoutPage() {
   const [method, setMethod] = useState('BANK_TRANSFER');
   const [offset, setOffset] = useState(null);
   const [now, setNow] = useState(Date.now());
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
     let mounted = true;
-    get(`/bookings/${bookingId}`)
+    let inFlight = false;
+    const controller = new AbortController();
+    setBooking(null); setError(''); setOffset(null);
+    function load() {
+      if (inFlight) return;
+      inFlight = true;
+      get(`/bookings/${bookingId}`, { signal: controller.signal })
       .then(({ data, server_time }) => {
         if (mounted) {
           setBooking(data);
@@ -21,12 +30,16 @@ export default function CheckoutPage() {
         }
       })
       .catch((e) => {
-        if (mounted) setError(e.message);
-      });
+        if (mounted && e.name !== 'AbortError') setError(e.message);
+      }).finally(() => { inFlight = false; });
+    }
+    load();
+    const refresh = setInterval(load, 15000);
     return () => {
       mounted = false;
+      controller.abort(); clearInterval(refresh);
     };
-  }, [bookingId]);
+  }, [bookingId, revision]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(timer);
@@ -39,6 +52,7 @@ export default function CheckoutPage() {
   const expired =
     booking && (booking.status === 'EXPIRED' || (booking.status === 'PENDING' && remaining === 0));
   async function pay() {
+    if (!paymentEnabled) return;
     setBusy(true);
     setError('');
     try {
@@ -52,16 +66,16 @@ export default function CheckoutPage() {
       setBusy(false);
     }
   }
-  if (!booking) return error ? <Notice>{error}</Notice> : <Loading />;
+  if (!booking) return error ? <><Notice>{error}</Notice><button className="button button--secondary" onClick={() => setRevision((n) => n + 1)}>Thử lại</button><Link className="text-link" to="/my-bookings">Về lịch sử đặt sân</Link></> : <Loading />;
   return (
     <>
       <PageHeader
         eyebrow="HOÀN TẤT LỊCH HẸN"
-        title={paid ? 'Đặt sân thành công' : 'Xác nhận & thanh toán'}
+        title={paid ? 'Booking đã xác nhận' : 'Thông tin giữ chỗ'}
         description={
           paid
             ? 'Sân của bạn đã được xác nhận. Hẹn gặp bạn trên sân!'
-            : 'Hoàn tất thanh toán trước khi hết thời hạn giữ chỗ.'
+            : 'Theo dõi thời hạn giữ chỗ chính thức do máy chủ trả về.'
         }
       />
       <div className="checkout-grid">
@@ -79,8 +93,8 @@ export default function CheckoutPage() {
           ) : (
             <div className="panel">
               <div className="panel__header">
-                <h2>Phương thức thanh toán</h2>
-                <span className="chip">SANDBOX</span>
+                <h2>Thông tin giữ chỗ</h2>
+                <span className="chip">CHỈ XEM</span>
               </div>
               <div className="panel__body">
                 <div
@@ -112,7 +126,7 @@ export default function CheckoutPage() {
                         value={value}
                         checked={method === value}
                         onChange={() => setMethod(value)}
-                        disabled={expired || busy}
+                        disabled={!paymentEnabled || expired || busy}
                       />
                       <Icon size={22} />
                       <span>{label}</span>
@@ -120,15 +134,16 @@ export default function CheckoutPage() {
                   ))}
                 </div>
                 <Notice type="info">
-                  Môi trường demo: nút bên dưới xác nhận thanh toán giả lập, không thu tiền thực.
+                  Thanh toán online đang tạm hoãn và sẽ được hoàn thiện ở TASK 6. Chưa có tiền được ghi nhận từ thao tác giữ chỗ này.
                 </Notice>
                 <button
                   className="button button--primary button--wide"
-                  disabled={busy || expired || booking.status !== 'PENDING' || offset === null}
+                  disabled={!paymentEnabled || busy || expired || booking.status !== 'PENDING' || offset === null}
                   onClick={pay}
                 >
-                  {busy ? 'Đang xác nhận…' : 'Xác nhận thanh toán Sandbox'}
+                  {paymentEnabled ? 'Xác nhận thanh toán Sandbox' : 'Thanh toán chưa khả dụng'}
                 </button>
+                <Link className="button button--secondary button--wide" to="/my-bookings">Xem lịch sử đặt sân</Link>
                 {expired && (
                   <Link
                     className="button button--secondary button--wide"

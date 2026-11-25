@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       port: 5173,
-      proxy: {
+      proxy: env.VITE_DATA_MODE === 'mock' ? undefined : {
         '/api': { target: env.VITE_PROXY_TARGET || 'http://localhost:4000', changeOrigin: true },
       },
     },

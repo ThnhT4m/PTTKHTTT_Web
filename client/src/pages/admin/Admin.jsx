@@ -265,8 +265,8 @@ export default function AdminPage() {
       {tab === 'operations' && (
         <>
           <Notice type="info">
-            <ShieldCheck size={17} /> Chỉ ADMIN thay đổi trực tiếp trạng thái vận hành. Thao tác bắt
-            buộc lý do và lưu log trong cùng giao dịch.
+            <ShieldCheck size={17} /> ADMIN và quản lý đúng cơ sở có quyền thay trạng thái vận hành.
+            Thao tác bắt buộc lý do và lưu log trong cùng giao dịch.
           </Notice>
           <div className="panel">
             <div className="panel__header">

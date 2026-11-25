@@ -1,0 +1,57 @@
+.customer-form { display: grid; gap: 18px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.customer-password { display: flex; align-items: center; gap: 6px; }
+.customer-password .input { min-width: 0; flex: 1; }
+.customer-password .icon-button { min-width: 44px; min-height: 44px; }
+.customer-field-error { color: #b33323; font-size: 12px; }
+.customer-filters { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; margin: 24px 0; }
+.customer-filters .field { flex: 1; min-width: 150px; }
+.customer-pagination { display: flex; justify-content: center; gap: 18px; align-items: center; margin: 24px 0; }
+.customer-slot--selected { outline: 3px solid var(--green); outline-offset: 3px; }
+.customer-slot-note { font-size: 11px; line-height: 1.5; }
+.customer-section { margin-top: 22px; }
+.customer-history { padding: 0; list-style: none; display: grid; gap: 14px; }
+.customer-history > li { padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+.customer-stars { display: flex; gap: 8px; flex-wrap: wrap; }
+.customer-rating { border: 0; margin: 0; padding: 0; }
+.customer-rating legend { font-weight: 600; margin-bottom: 8px; }
+.customer-stars label { display: flex; gap: 6px; align-items: center; min-height: 44px; padding: 8px; cursor: pointer; }
+.customer-booking-modal { overflow-wrap: anywhere; }
+.customer-booking-modal h3 { margin: 24px 0 12px; }
+.customer-booking-modal .summary-list__row { gap: 16px; }
+.customer-form .input[aria-invalid=true] { border-color: #b33323; }
+.app-shell .button { min-height: 44px; }
+.app-shell .slot-card { min-height: 110px; }
+.app-shell .field__hint, .app-shell .muted { font-size: 12px; }
+.app-shell .booking-code { font-size: 12px; }
+.app-shell .notice, .app-shell .field__label { font-size: 13px; }
+.app-shell .summary-list__row { font-size: 14px; }
+.app-shell .slot-card small, .app-shell .legend__item { font-size: 12px; }
+.app-shell .slot-card:disabled { opacity: .85; }
+.app-shell .venue-card__eyebrow { font-size: 11px; }
+.app-shell .venue-card__location, .app-shell .court-row__info p { font-size: 12px; }
+.app-shell .section-title { flex-wrap: wrap; }
+.app-shell .tabs { overflow-x: auto; }
+.app-shell .tabs button { min-height: 44px; white-space: nowrap; font-size: 12px; }
+.auth-card__form .input { font-size: 14px; }
+.auth-card__form .button { font-size: 13px; min-height: 44px; }
+@media (max-width: 820px) {
+  .app-shell .site-nav { gap: 0; }
+  .app-shell .site-nav a { font-size: 12px; min-height: 44px; display: inline-flex; align-items: center; }
+}
+@media (max-width: 580px) {
+  .customer-filters .field { flex-basis: calc(50% - 14px); min-width: 110px; }
+  .app-shell .slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-shell .slot-card__time, .app-shell .slot-card__price { font-size: 12px; }
+  .app-shell .slot-card small { font-size: 11px; }
+  .app-shell .booking-card__details p { font-size: 12px; }
+  .app-shell .booking-card__actions .button { font-size: 12px; }
+  .app-shell .notice { font-size: 12px; }
+  .app-shell .site-header { height: auto; min-height: 90px; }
+  .app-shell .site-header__inner { flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+  .app-shell .site-nav { order: 3; flex-basis: 100%; justify-content: flex-start; }
+  .app-shell .input { font-size: 16px; }
+  .app-shell .hero__description, .app-shell .bottom-callout p { font-size: 12px; }
+  .app-shell .footer { font-size: 10px; flex-wrap: wrap; gap: 8px; }
+  .customer-pagination { gap: 10px; }
+  .customer-pagination .button { font-size: 12px; padding: 10px; }
+}

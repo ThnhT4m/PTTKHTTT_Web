@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import {
   AlertCircle,
@@ -9,7 +9,8 @@ import {
   ArrowUpRight,
   Clock3,
 } from 'lucide-react';
-import { get } from '../api/client';
+import { money, dateVN, timeVN } from '../utils/format.js';
+import { canAccess } from '../utils/roles.js';
 import { useAuth, homeFor } from '../contexts/AuthContext';
 export const SPORTS = {
   FOOTBALL: 'Bóng đá',
@@ -18,36 +19,8 @@ export const SPORTS = {
   PICKLEBALL: 'Pickleball',
   BASKETBALL: 'Bóng rổ',
 };
-export const money = (n) =>
-  new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(Number(n || 0));
-export const dateVN = (date) =>
-  date
-    ? new Date(date).toLocaleDateString('vi-VN', {
-        timeZone: 'Asia/Ho_Chi_Minh',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
-    : '—';
-export const timeVN = (date) =>
-  date
-    ? new Date(date).toLocaleTimeString('vi-VN', {
-        timeZone: 'Asia/Ho_Chi_Minh',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '—';
-export const todayVN = () =>
-  new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
+export { money, dateVN, timeVN, todayVN } from '../utils/format.js';
+export { useResource } from '../hooks/useResource.js';
 export const labels = {
   AVAILABLE: 'Còn trống',
   HELD: 'Đang giữ chỗ',
@@ -128,48 +101,36 @@ export function Field({ label, hint, children, className = '' }) {
     </label>
   );
 }
-export function useResource(path, deps = []) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [revision, setRevision] = useState(0);
-  const reload = useCallback(() => setRevision((n) => n + 1), []);
-  useEffect(() => {
-    if (!path) {
-      setLoading(false);
-      setData(null);
-      return;
-    }
-    const controller = new AbortController();
-    setLoading(true);
-    setError('');
-    setData(null);
-    get(path, { signal: controller.signal })
-      .then((r) => {
-        if (!controller.signal.aborted) setData(r.data);
-      })
-      .catch((e) => {
-        if (!controller.signal.aborted && e.name !== 'AbortError') setError(e.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [path, revision, ...deps]);
-  return { data, loading, error, reload, setData };
-}
 export function Protected({ roles }) {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionError, retrySession } = useAuth();
   const location = useLocation();
   if (loading) return <Loading />;
-  if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
-  if (roles && !roles.includes(user.role)) return <Navigate to={homeFor(user.role)} replace />;
+  if (sessionError) return (
+    <>
+      <Notice>{sessionError}</Notice>
+      <button className="button button--secondary" onClick={retrySession}>
+        Thử lại phiên đăng nhập
+      </button>
+    </>
+  );
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
+  if (!canAccess(user, roles)) return <Navigate to={homeFor(user.role)} replace />;
   return <Outlet />;
 }
 export function Modal({ title, children, onClose }) {
+  const container = useRef(null), close = useRef(onClose), previous = useRef(document.activeElement);
+  close.current = onClose;
   useEffect(() => {
+    const focusable = () => [...(container.current?.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], summary, [tabindex="0"]') || [])].filter((node) => node.getClientRects().length);
+    if (!container.current?.contains(document.activeElement)) focusable()[0]?.focus();
     const handle = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') close.current();
+      if (e.key === 'Tab') {
+        const items = focusable(), first = items[0], last = items.at(-1);
+        if (!items.length) { e.preventDefault(); return; }
+        if (e.shiftKey && (document.activeElement === first || !container.current?.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
     };
     document.addEventListener('keydown', handle);
     const old = document.body.style.overflow;
@@ -177,8 +138,9 @@ export function Modal({ title, children, onClose }) {
     return () => {
       document.removeEventListener('keydown', handle);
       document.body.style.overflow = old;
+      if (previous.current?.isConnected) previous.current.focus();
     };
-  }, [onClose]);
+  }, []);
   return (
     <div
       className="modal-overlay"
@@ -186,7 +148,7 @@ export function Modal({ title, children, onClose }) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <section className="modal" role="dialog" aria-modal="true" aria-label={title}>
+      <section ref={container} className="modal" role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal__header">
           <h2>{title}</h2>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Đóng">
@@ -198,7 +160,7 @@ export function Modal({ title, children, onClose }) {
     </div>
   );
 }
-export function VenueCard({ venue }) {
+export function VenueCard({ venue, from }) {
   const sports = venue.sport_types || [];
   return (
     <article className="venue-card">
@@ -229,7 +191,7 @@ export function VenueCard({ venue }) {
               <StatusBadge status={venue.status} />
             )}
           </span>
-          <Link className="button button--ghost button--small" to={`/venues/${venue.id}`}>
+          <Link className="button button--ghost button--small" to={`/venues/${venue.id}`} state={from ? { catalog: from } : undefined}>
             Xem sân <ArrowUpRight size={17} />
           </Link>
         </div>
