@@ -6,10 +6,16 @@ import { writeCatalogue } from './catalogue.js';
 import { createMockStore } from './store.js';
 import { writeCustomer, expireHolds, customerAudit } from './customer.js';
 import { hashMockPassword, verifyMockPassword } from './password.js';
+import { writeAftersales } from './aftersales.js';
+import { writeCounter } from './counter.js';
+import { writeAdmin } from './admin.js';
+import { publicUser } from './rules.js';
+import { orderRows } from './order.js';
+import { redactSecrets } from '../utils/redact.js';
 
 const SESSION_KEY = 'sportbooking.mock.sessions.v1';
 const fail = (status, code, message, details) => { throw new ApiError({ code, message, details }, status); };
-const unsupported = () => fail(501, 'MOCK_NOT_IMPLEMENTED', 'Chế độ mock chưa hỗ trợ nghiệp vụ này trong phạm vi TASK 1–3. Không có dữ liệu nào được thay đổi.');
+const unsupported = () => fail(501, 'MOCK_NOT_IMPLEMENTED', 'Chế độ mock chưa hỗ trợ nghiệp vụ này trong phạm vi TASK 1–4. Không có dữ liệu nào được thay đổi.');
 const readJSON = (storage, key, fallback) => {
   try { return JSON.parse(storage?.getItem(key)) || fallback; } catch { return fallback; }
 };
@@ -26,7 +32,7 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
   };
   const find = (rows, id) => rows.find((row) => row.id === id) || fail(404, 'NOT_FOUND', 'Không tìm thấy dữ liệu.');
   const ownsVenue = (user, venueId) => user.role === 'ADMIN' ||
-    db.venues.some((v) => v.id === venueId && v.manager_id === user.id);
+    (user.role === 'VENUE_MANAGER' && db.venues.some((v) => v.id === venueId && v.manager_id === user.id));
   const canReadBooking = (user, booking) => user.role === 'CUSTOMER'
     ? booking.customer_id === user.id : ownsVenue(user, booking.venue_id);
   const checkedBooking = (user, id) => {
@@ -35,7 +41,7 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
     if (!canReadBooking(user, b)) fail(403, 'FORBIDDEN', 'Đơn không thuộc phạm vi của bạn.');
     return b;
   };
-  function page(rows, q, filters = []) {
+  function page(rows, q, filters = [], order = 'catalogue') {
     for (const key of q.keys()) if (!['limit', 'offset', ...filters].includes(key))
       fail(400, 'VALIDATION_ERROR', `Bộ lọc không được hỗ trợ: ${key}.`);
     const integer = (key, fallback, min, max) => {
@@ -46,7 +52,7 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
       return value;
     };
     const limit = integer('limit', 100, 1, 300), offset = integer('offset', 0, 0, 1000000);
-    return [...rows].sort((a, b) => a.id.localeCompare(b.id)).slice(offset, offset + limit);
+    return orderRows(rows, order).slice(offset, offset + limit);
   }
   function boolean(q, key) {
     if (q.has(key) && !['true', 'false'].includes(q.get(key))) fail(400, 'VALIDATION_ERROR', `${key} phải là true hoặc false.`);
@@ -68,7 +74,17 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
   }
   function visibleCourts(user, venueId) {
     const privileged = user && ownsVenue(user, venueId);
-    return db.courts.filter((c) => c.venue_id === venueId && (privileged || c.status === 'ACTIVE'));
+    return orderRows(db.courts.filter((c) => c.venue_id === venueId && (privileged || c.status === 'ACTIVE')));
+  }
+  function accessibleVenue(id, user) {
+    const venue = find(db.venues, id);
+    if (venue.status !== 'ACTIVE' && (!user || !ownsVenue(user, id))) fail(404, 'VENUE_NOT_FOUND', 'Cơ sở đang ngưng phục vụ.');
+    return venue;
+  }
+  function refundView(refund) {
+    const booking = find(db.bookings, refund.booking_id), venue = find(db.venues, booking.venue_id);
+    return { ...refund, customer_id: booking.customer_id, customer_name: booking.customer_name,
+      manager_id: venue.manager_id, venue_id: venue.id, venue_name: venue.name, court_name: booking.court_name };
   }
   function commit(staged) {
     try { store.commit(staged); }
@@ -81,7 +97,7 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
     sessions = readJSON(storage, SESSION_KEY, sessions);
     db = store.read();
     const record = sessions[token];
-    const user = record && record.expires > now() ? db.users.find((u) => u.id === record.userId && u.is_active) : null;
+    const user = record && record.expires > now() && (record.version || 0) === (db.sessionVersions?.[record.userId] || 0) ? db.users.find((u) => u.id === record.userId && u.is_active) : null;
     if (db.bookings.some((b) => b.status === 'PENDING' && Date.parse(b.held_until) <= now())) {
       const staged = structuredClone(db); expireHolds(staged, now()); commit(staged);
     }
@@ -100,9 +116,9 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
       if (!valid) fail(401, 'INVALID_CREDENTIALS', 'Email hoặc mật khẩu không đúng.');
       if (!account.is_active) fail(403, 'ACCOUNT_DISABLED', 'Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.');
       const newToken = `mock.${globalThis.crypto.randomUUID()}`;
-      sessions[newToken] = { userId: account.id, expires: now() + 86400000 };
+      sessions[newToken] = { userId: account.id, expires: now() + 86400000, version: db.sessionVersions?.[account.id] || 0 };
       saveSessions();
-      return { user: account, token: newToken };
+      return { user: publicUser(account), token: newToken };
     }
     if (method === 'POST' && url.pathname === '/auth/register') {
       if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['full_name', 'email', 'phone', 'password'].includes(key))) fail(400, 'VALIDATION_ERROR', 'Đăng ký chỉ nhận họ tên, email, điện thoại và mật khẩu.');
@@ -119,7 +135,7 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
       commit(staged); response.status = 201;
       return { user: account };
     }
-    if (url.pathname === '/auth/me' && method === 'GET') return { user: requireUser(user) };
+    if (url.pathname === '/auth/me' && method === 'GET') return { user: publicUser(requireUser(user)) };
     if (url.pathname === '/auth/logout' && method === 'POST') {
       requireUser(user);
       Object.keys(sessions).forEach((key) => { if (sessions[key].userId === user.id) delete sessions[key]; });
@@ -131,7 +147,7 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
       // Stage the write and its audit together; failed validation never alters the store.
       const staged = structuredClone(db);
       const args = { path: url.pathname, method, body, user, now: now() };
-      const result = writeCatalogue(staged, args) || writeCustomer(staged, args);
+      const result = writeAdmin(staged, args) || writeCatalogue(staged, args) || writeCounter(staged, args) || writeAftersales(staged, args) || writeCustomer(staged, args);
       if (result) {
         commit(staged);
         response.status = result.status;
@@ -142,30 +158,31 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
     if (url.pathname === '/venues') {
       const mine = boolean(q, 'mine');
       if (mine) requireRole(user, ['VENUE_MANAGER', 'ADMIN']);
-      const matched = priceFilter(db.courts.filter((c) => c.status === 'ACTIVE'), q);
+      const matched = priceFilter(db.courts.filter((c) => mine || user?.role === 'ADMIN' || c.status === 'ACTIVE'), q);
       const search = (value, filter) => value.toLocaleLowerCase('vi').includes((filter || '').toLocaleLowerCase('vi'));
-      const rows = db.venues.filter((v) => (!mine || ownsVenue(user, v.id)) && (mine || user?.role === 'ADMIN' || v.status === 'ACTIVE') &&
-        search(`${v.name} ${v.address}`, q.get('q')) && search(v.district, q.get('district')) &&
+      const rows = db.venues.filter((v) => (!mine || v.manager_id === user.id) && (mine || user?.role === 'ADMIN' || v.status === 'ACTIVE') &&
+        search(`${v.name} ${v.address}`, q.get('q')) && (!q.has('district') || v.district === q.get('district')) &&
         (!['sport_type', 'min_price', 'max_price'].some((k) => q.has(k)) || matched.some((c) => c.venue_id === v.id)))
         .map((v) => {
-          const courts = visibleCourts(user, v.id);
-          return { ...v, sport_types: [...new Set(courts.map((c) => c.sport_type))], min_price: courts.length ? Math.min(...courts.map((c) => c.hourly_price)) : null };
+          const courts = db.courts.filter((c) => c.venue_id === v.id && c.status === 'ACTIVE');
+          return { ...v, court_count: db.courts.filter((c) => c.venue_id === v.id).length, sport_types: [...new Set(courts.map((c) => c.sport_type))], min_price: courts.length ? Math.min(...courts.map((c) => c.hourly_price)) : null };
         });
       return page(rows, q, ['q', 'district', 'sport_type', 'min_price', 'max_price', 'mine']);
     }
     if (parts[0] === 'venues' && parts[1] && parts.length <= 3) {
-      const venue = find(db.venues, parts[1]);
+      const venue = accessibleVenue(parts[1], user);
       if (parts.length === 2) return { ...venue, courts: visibleCourts(user, venue.id) };
       if (parts[2] === 'courts') return page(priceFilter(visibleCourts(user, venue.id), q), q, ['sport_type', 'min_price', 'max_price']);
     }
     if (parts[0] === 'courts' && parts[1] && parts.length <= 3) {
       const court = find(db.courts, parts[1]);
-      if (court.status !== 'ACTIVE' && (!user || !ownsVenue(user, court.venue_id))) fail(404, 'NOT_FOUND', 'Sân không phục vụ.');
-      if (parts.length === 2) return { ...court, venue_name: find(db.venues, court.venue_id).name };
+      const venue = accessibleVenue(court.venue_id, user);
+      if ((court.status !== 'ACTIVE' || venue.status !== 'ACTIVE') && (!user || !ownsVenue(user, court.venue_id))) fail(404, 'NOT_FOUND', 'Sân không phục vụ.');
+      if (parts.length === 2) return { ...court, venue_name: venue.name, venue_status: venue.status, manager_id: venue.manager_id, address: venue.address, district: venue.district };
       if (parts[2] === 'slots') {
         const date = q.get('date') || todayVN(now());
         if (!isISODate(date)) fail(400, 'VALIDATION_ERROR', 'Ngày phải hợp lệ theo YYYY-MM-DD.');
-        return db.slots.filter((s) => s.court_id === court.id && s.slot_date === date);
+        return db.slots.filter((s) => s.court_id === court.id && s.slot_date === date).sort((a, b) => a.start_time.localeCompare(b.start_time) || a.id.localeCompare(b.id));
       }
     }
     if (parts[0] === 'bookings') {
@@ -180,13 +197,13 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
           ['status', 'source', 'venue_id', 'court_id', 'refund_status'].every((key) => !q.has(key) || b[key] === q.get(key)) &&
           (!q.has('date') || todayVN(b.start_at) === q.get('date')) &&
           (!q.has('has_issue') || !!b.issue_reported_at === issue));
-        return page(rows, q, ['status', 'source', 'venue_id', 'court_id', 'date', 'has_issue', 'refund_status']);
+        return page(rows, q, ['status', 'source', 'venue_id', 'court_id', 'date', 'has_issue', 'refund_status'], 'recent');
       }
       const b = checkedBooking(user, parts[1]);
       if (parts.length === 2) return b;
       if (parts.length === 3 && parts[2] === 'history') return {
-        booking: b, payments: db.payments.filter((p) => p.booking_id === b.id),
-        reschedules: db.reschedules.filter((r) => r.booking_id === b.id),
+        booking: b, payments: orderRows(db.payments.filter((p) => p.booking_id === b.id), 'history'),
+        reschedules: orderRows(db.reschedules.filter((r) => r.booking_id === b.id), 'history'),
         refund: db.refunds.find((r) => r.booking_id === b.id) || null,
         review: db.reviews.find((r) => r.booking_id === b.id) || null,
       };
@@ -196,7 +213,7 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
       if (parts.length === 2) {
         const refund = find(db.refunds, parts[1]);
         checkedBooking(user, refund.booking_id);
-        return refund;
+        return refundView(refund);
       }
       if (parts.length === 1) {
         enumQuery(q, 'status', ['REQUESTED', 'APPROVED', 'PROCESSING', 'COMPLETED']);
@@ -204,7 +221,7 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
           const b = find(db.bookings, r.booking_id);
           return canReadBooking(user, b) && (!q.has('venue_id') || b.venue_id === q.get('venue_id')) &&
             (!q.has('booking_id') || r.booking_id === q.get('booking_id')) && (!q.has('status') || r.status === q.get('status'));
-        }), q, ['status', 'booking_id', 'venue_id']);
+        }).map(refundView), q, ['status', 'booking_id', 'venue_id'], 'recent');
       }
     }
     if (parts[0] === 'admin') {
@@ -218,10 +235,10 @@ export function createMockTransport({ storage, now = Date.now } = {}) {
         const active = boolean(q, 'is_active');
         return page(db.users.filter((u) => (!q.has('role') || u.role === q.get('role')) &&
           (!q.has('is_active') || u.is_active === active) &&
-          (!q.has('q') || `${u.full_name} ${u.email}`.toLowerCase().includes(q.get('q').toLowerCase()))), q, ['q', 'role', 'is_active']);
+          (!q.has('q') || `${u.full_name} ${u.email}`.toLowerCase().includes(q.get('q').toLowerCase()))).map(publicUser), q, ['q', 'role', 'is_active'], 'recent');
       }
       if (url.pathname === '/admin/audit-logs') return page(db.audits.filter((a) =>
-        ['actor_id', 'entity_id', 'action'].every((k) => !q.has(k) || a[k] === q.get(k))), q, ['actor_id', 'entity_id', 'action']);
+        ['actor_id', 'entity_id', 'action'].every((k) => !q.has(k) || a[k] === q.get(k))).map(redactSecrets), q, ['actor_id', 'entity_id', 'action'], 'audit');
     }
     fail(404, 'MOCK_ROUTE_NOT_FOUND', 'Mock chưa có API đọc tại đường dẫn này.');
   }

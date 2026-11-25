@@ -23,6 +23,7 @@ export function createMockStore(storage, now) {
       result[key] = result[key].map((row) => { const updated = changes.get(row.id); changes.delete(row.id); return updated || row; }).concat([...changes.values()]);
     }
     result.credentials = state.credentials || {};
+    result.sessionVersions = state.sessionVersions || {};
     return result;
   }
   let db = restore(saved);
@@ -43,7 +44,7 @@ export function createMockStore(storage, now) {
       const next = JSON.stringify({ schema: 2, anchor, venues: staged.venues, courts: staged.courts,
         slots: staged.slots.filter((s) => baseSlots.get(s.id) !== JSON.stringify(s)),
         audits: staged.audits.filter((a) => !seedAudits.has(a.id)),
-        ...business, credentials: staged.credentials || {},
+        ...business, credentials: staged.credentials || {}, sessionVersions: staged.sessionVersions || {},
       });
       storage?.setItem(CATALOGUE_STORE_KEY, next);
       raw = next; db = staged;

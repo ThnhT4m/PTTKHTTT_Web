@@ -9,6 +9,7 @@ import { createServer } from 'vite';
 import { runManagerChecks } from './manager.browser.mjs';
 import { runCustomerChecks } from './customer.browser.mjs';
 import { runApiCheckoutCheck } from './api.browser.mjs';
+import { runOperationsChecks } from './operations.browser.mjs';
 
 const clientRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const candidates = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].filter(Boolean);
@@ -142,6 +143,7 @@ try {
   await logout();
   await runManagerChecks({ evaluate, until, visit, login, logout, pass, send });
   await runCustomerChecks({ evaluate, until, visit, login, logout, pass, send });
+  await runOperationsChecks({ evaluate, until, visit, login, logout, pass, send });
   assert.deepEqual(apiRequests, []);
   assert.deepEqual(exceptions, []);
   pass('Không request backend /api hoặc :4000; không có lỗi JavaScript runtime');

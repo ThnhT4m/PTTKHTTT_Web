@@ -204,7 +204,7 @@ test('reschedule rejects wrong price/sport/venue, occupied target, old target, f
   for (const court of [courts.find((c) => c.sport_type !== booking.sport_type), foreignCourt]) badTargets.push((await client.get(`/courts/${court.id}/slots?date=2026-11-27`)).data.find((s) => s.status === 'AVAILABLE').id);
   const booked = (await client.get(`/courts/${booking.court_id}/slots?date=2026-11-26`)).data.find((s) => s.status === 'HELD');
   badTargets.push(booked.id);
-  for (const id of badTargets) await assert.rejects(client.post(`/bookings/${booking.id}/reschedule`, { new_time_slot_id: id, reason: 'Kiểm tra đích sai' }), { status: 409 });
+  for (const [index, id] of badTargets.entries()) await assert.rejects(client.post(`/bookings/${booking.id}/reschedule`, { new_time_slot_id: id, reason: 'Kiểm tra đích sai' }), { status: index === 1 || index === 2 ? 400 : 409 });
   const refunded = (await client.get('/bookings?refund_status=REQUESTED')).data[0];
   await assert.rejects(client.post(`/bookings/${refunded.id}/reschedule`, { new_time_slot_id: target.id, reason: 'Đã yêu cầu hoàn tiền', is_venue_issue: true }), { status: 409 });
 });
@@ -213,10 +213,10 @@ test('reschedule rejects price mismatch and voluntary changes after old start; i
   const { client, storage, booking, target } = await rescheduleSetup();
   const manager = await setup({ storage, email: 'manager1@example.com' });
   await manager.client.patch(`/slots/${target.id}`, { expected_version: target.version, price: booking.total_amount + 1 });
-  await assert.rejects(client.post(`/bookings/${booking.id}/reschedule`, { new_time_slot_id: target.id, reason: 'Sai giá đích' }), { status: 409 });
+  await assert.rejects(client.post(`/bookings/${booking.id}/reschedule`, { new_time_slot_id: target.id, reason: 'Sai giá đích' }), { status: 400, code: 'PRICE_MISMATCH' });
   const store = createMockStore(storage, () => instant), db = structuredClone(store.read());
-  db.bookings.find((b) => b.id === booking.id).start_at = new Date(instant - 1).toISOString(); store.commit(db);
-  await assert.rejects(client.post(`/bookings/${booking.id}/reschedule`, { new_time_slot_id: target.id, reason: 'Đã bắt đầu' }), { status: 409, code: 'RESCHEDULE_TOO_LATE' });
+  db.slots.find((s) => s.id === booking.time_slot_id).start_at = new Date(instant - 1).toISOString(); db.slots.find((s) => s.id === target.id).price = booking.total_amount; store.commit(db);
+  await assert.rejects(client.post(`/bookings/${booking.id}/reschedule`, { new_time_slot_id: target.id, reason: 'Đã bắt đầu' }), { status: 409, code: 'BOOKING_ALREADY_STARTED' });
 });
 test('refund request requires recorded issue, remains REQUESTED, is idempotent, persists and blocks rescheduling', async () => {
   const { client, storage } = await setup(), rows = (await client.get('/bookings?status=CONFIRMED')).data;
@@ -242,12 +242,15 @@ test('review accepts only one owner COMPLETED review, validates rating/comment a
   await assert.rejects(client.post(`/bookings/${pending.id}/reviews`, { rating: 5 }), { status: 409 });
   const reload = await setup({ storage }); assert.equal((await reload.client.get(`/bookings/${booking.id}/history`)).data.review.comment, review.comment);
 });
-test('customer writes appear in manager scope; payment and TASK 4 mutations remain unsupported', async () => {
+test('customer writes appear in manager scope; online payment stays unsupported and POS enforces state/validation', async () => {
   const storage = memoryStorage(), one = await setup({ storage }), { slot } = await target(one.client);
   const booking = (await one.client.post('/bookings/online', { time_slot_id: slot.id })).data;
   const manager = await setup({ storage, email: 'manager1@example.com' });
   assert.ok((await manager.client.get('/bookings')).data.some((b) => b.id === booking.id));
-  for (const [client, path, body] of [[one.client, '/payments/create', { booking_id: booking.id, method: 'BANK_TRANSFER' }], [one.client, '/payments/confirm', { transaction_code: 'no-payment' }], [manager.client, '/bookings/walk-in', {}], [manager.client, `/bookings/${booking.id}/complete`, {}], [manager.client, `/bookings/${booking.id}/venue-issue`, {}]]) await assert.rejects(client.post(path, body), { status: 501, code: 'MOCK_NOT_IMPLEMENTED' });
+  for (const [client, path, body] of [[one.client, '/payments/create', { booking_id: booking.id, method: 'BANK_TRANSFER' }], [one.client, '/payments/confirm', { transaction_code: 'no-payment' }]]) await assert.rejects(client.post(path, body), { status: 501, code: 'MOCK_NOT_IMPLEMENTED' });
+  await assert.rejects(manager.client.post('/bookings/walk-in', {}), { status: 400 });
+  await assert.rejects(manager.client.post(`/bookings/${booking.id}/complete`, {}), { status: 409 });
+  await assert.rejects(manager.client.post(`/bookings/${booking.id}/venue-issue`, {}), { status: 400 });
   assert.equal((await one.client.get(`/bookings/${booking.id}`)).data.status, 'PENDING');
 });
 test('customer action visibility and backend field errors support safe forms', () => {

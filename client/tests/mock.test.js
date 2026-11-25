@@ -138,8 +138,9 @@ test('unsupported business mutations fail; customers cannot write M2/M3; booking
   for (const [method, path, body] of [
     ['post', '/payments/create', { booking_id: pending.id, method: 'BANK_TRANSFER' }],
     ['post', '/payments/confirm', { transaction_code: 'MOCK-PENDING-1' }],
-    ['post', `/bookings/${pending.id}/complete`, {}], ['post', `/bookings/${pending.id}/extend`, {}],
   ]) await assert.rejects(client[method](path, body), (e) => e.status === 501 && e.code === 'MOCK_NOT_IMPLEMENTED' && /TASK 1/.test(e.message));
+  await assert.rejects(client.post(`/bookings/${pending.id}/complete`, {}), { status: 403 });
+  await assert.rejects(client.post(`/bookings/${pending.id}/extend`, {}), { status: 403 });
   // TASK 3 implements these endpoints; invalid input/state must now be rejected by business rules.
   await assert.rejects(client.post('/auth/register', {}), { status: 400 });
   await assert.rejects(client.post('/bookings/online', { time_slot_id: pending.time_slot_id }), { status: 409 });

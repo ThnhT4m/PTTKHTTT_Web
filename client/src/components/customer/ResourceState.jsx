@@ -1,7 +1,7 @@
 import { Empty, Loading, Notice } from '../shared';
 export function CustomerResource({ resource, empty = 'Chưa có dữ liệu.', children }) {
   if (resource.loading) return <Loading />;
-  if (resource.error) return <><Notice>{resource.error.message}</Notice><button className="button button--secondary" onClick={resource.reload}>Thử lại</button></>;
+  if (resource.error) return <><Notice>{resource.error.message}</Notice><button type="button" className="button button--secondary" onClick={resource.reload}>Thử lại</button></>;
   if (!resource.data || (Array.isArray(resource.data) && !resource.data.length)) return <Empty>{empty}</Empty>;
   return children;
 }

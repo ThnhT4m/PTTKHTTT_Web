@@ -1,0 +1,26 @@
+.workflow-form { display: grid; gap: 18px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.workflow-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; padding: 20px; }
+.workflow-filters .field { flex: 1; min-width: 140px; }
+.workflow-filters .input { min-height: 44px; }
+.workflow-panel { margin-bottom: 24px; }
+.workflow-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.workflow-check { display: flex; align-items: start; gap: 10px; cursor: pointer; }
+.workflow-check input { width: 20px; height: 20px; accent-color: var(--green); }
+.workflow-message { margin: 16px 0; }
+.workflow-table { min-width: 850px; }
+.workflow-page .button { min-height: 44px; }
+.workflow-page .data-table { font-size: 13px; }
+.workflow-page .data-table th, .workflow-page .data-table td > small { font-size: 12px; }
+.workflow-page .field__label, .workflow-page .notice { font-size: 13px; }
+.workflow-page .tabs { overflow-x: auto; }
+.workflow-page .tabs button { min-height: 44px; white-space: nowrap; }
+.workflow-page .slot-card small { font-size: 12px; }
+.workflow-page .slot-card:disabled { opacity: .8; }
+.workflow-audit { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 560px; font-size: 12px; }
+@media (max-width: 580px) {
+  .workflow-page .slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workflow-filters { padding: 16px; }
+  .workflow-filters .field { min-width: 120px; }
+  .workflow-page .input { font-size: 16px; }
+  .workflow-page .panel__header { align-items: start; flex-wrap: wrap; }
+}
