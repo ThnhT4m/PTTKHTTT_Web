@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Field, Notice, Empty, SlotLegend, StatusBadge, Modal, money, dateVN, timeVN, todayVN } from '../shared';
 import { useManagerResource } from '../../hooks/useManagerResource.js';
 import { useServerNow } from '../../hooks/useCustomerResource.js';
@@ -10,22 +10,28 @@ import OperationModal from './OperationModal';
 
 function PriceModal({ slot, onClose, onDone, onReload }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState(null);
+  const locked = useRef(false), [unknown, setUnknown] = useState(false);
   async function submit(event) {
-    event.preventDefault(); if (busy) return;
+    event.preventDefault(); if (locked.current || unknown) return;
+    locked.current = true;
     const price = Number(new FormData(event.currentTarget).get('price'));
     setBusy(true); setError(null);
     try {
       if (!validPrice(price)) throw new ApiError({ message: 'Giá phải là số nguyên VND trong giới hạn cho phép.', code: 'VALIDATION_ERROR' }, 400);
       await manager.price(slot, price); onDone('Đã cập nhật giá ca. Giá booking đã tạo được giữ nguyên.');
-    } catch (err) { setError(err); } finally { setBusy(false); }
+    } catch (err) {
+      if (err.kind === 'network' || !err.status || err.status >= 500) setUnknown(true);
+      setError(err);
+    } finally { locked.current = false; setBusy(false); }
   }
   return <Modal title="Chỉnh giá khung giờ" onClose={() => { if (!busy) onClose(); }}>
     <p>{dateVN(slot.start_at)} · {timeVN(slot.start_at)} – {timeVN(slot.end_at)}</p>
     <MutationFeedback error={error} onReload={onReload} />
-    <form className="form-stack" onSubmit={submit}><fieldset className="manager-form" disabled={busy}>
+    {unknown && <Notice>Chưa xác định được kết quả lưu giá. Đóng biểu mẫu và tải lại lịch để kiểm tra trước khi thao tác tiếp.</Notice>}
+    <form className="form-stack" onSubmit={submit}><fieldset className="manager-form" disabled={busy || unknown}>
       <Field label="Giá ca (VND)"><input className="input" name="price" type="number" min={0} max={MAX_PRICE} step={1} defaultValue={slot.price} required autoFocus /></Field>
       <Notice type="info">Chỉ chỉnh giá ca chưa bắt đầu, AVAILABLE hoặc UNAVAILABLE, không có booking hiệu lực. Máy chủ kiểm tra lại khi lưu.</Notice>
-      <div className="form-actions"><button type="button" className="button button--secondary" onClick={onClose}>Đóng</button><button className="button button--primary" disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu giá ca'}</button></div>
+      <div className="form-actions"><button type="button" className="button button--secondary" onClick={onClose}>Đóng</button><button className="button button--primary" disabled={busy || unknown}>{busy ? 'Đang lưu…' : 'Lưu giá ca'}</button></div>
     </fieldset></form>
   </Modal>;
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CalendarDays, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { PageHeader, Field, Notice, Empty, SlotLegend, SPORTS, money, timeVN, todayVN, labels } from '../../components/shared';
+import { PageHeader, Field, Notice, SlotLegend, SPORTS, money, timeVN, todayVN, labels } from '../../components/shared';
 import { useCustomerResource, useServerNow } from '../../hooks/useCustomerResource.js';
 import { customer } from '../../services/customer.js';
 import { onlineSlotReason, validScheduleDate } from '../../utils/customer.js';
@@ -15,6 +15,8 @@ export default function SchedulePage() {
   const date = params.get('date') || todayVN(), context = `${id}/${date}`;
   const [selection, setSelection] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [unknown, setUnknown] = useState(false);
   const locked = useRef(false), latest = useRef(context); latest.current = context;
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const court = useCustomerResource(`/courts/${id}`);
   const venue = useCustomerResource(court.data?.venue_id ? `/venues/${court.data.venue_id}` : null);
   const validDate = validScheduleDate(date, todayVN());
@@ -36,13 +38,15 @@ export default function SchedulePage() {
     try {
       if (latest.current !== requestContext) return;
       const { data } = await customer.hold(selected.id);
+      if (!mounted.current || latest.current !== requestContext) return;
       const bookingId = data.id || data.booking?.id;
       if (!bookingId) throw new Error('Phản hồi giữ chỗ thiếu mã đơn. Hãy kiểm tra lịch sử đặt sân.');
       navigate(`/checkout/${bookingId}`);
     } catch (err) {
+      if (!mounted.current || latest.current !== requestContext) return;
       if (err.kind === 'network' || !err.status || err.status >= 500) { setUnknown(true); setError('Chưa xác định được kết quả giữ chỗ. Hãy kiểm tra lịch sử đặt sân trước khi thử lại.'); }
       else { setError(err.message); slots.reload(); setSelection(null); }
-    } finally { locked.current = false; setBusy(false); }
+    } finally { locked.current = false; if (mounted.current) setBusy(false); }
   }
   return <>
     <Link className="text-link" to={court.data?.venue_id ? `/venues/${court.data.venue_id}` : '/venues'}>← Quay lại cơ sở</Link>

@@ -8,7 +8,7 @@ export async function runApiCheckoutCheck({ clientRoot, send, evaluate, until, p
   process.env.VITE_DATA_MODE = 'api';
   const server = await createServer({ root: clientRoot, server: { host: '127.0.0.1', port: 0, strictPort: false } });
   let script;
-  const calls = [], failures = [];
+  const calls = [], failures = [], cancelledInterceptions = [];
   try {
     await server.listen();
     const base = `http://127.0.0.1:${server.httpServer.address().port}`;
@@ -20,7 +20,12 @@ export async function runApiCheckoutCheck({ clientRoot, send, evaluate, until, p
         const data = path === '/auth/me' ? { user } : path === `/bookings/${booking.id}` ? booking : null;
         const payload = data ? { success: true, data, server_time: new Date().toISOString() } : { success: false, error: { code: 'TEST_UNEXPECTED_ROUTE', message: 'Unexpected HTTP request' }, server_time: new Date().toISOString() };
         await send('Fetch.fulfillRequest', { requestId, responseCode: data ? 200 : 404, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify(payload)).toString('base64') });
-      } catch (error) { failures.push(error.message); }
+      } catch (error) {
+        // StrictMode/session restoration may abort the fetch before CDP fulfils it.
+        // Keep protocol cancellation separate from unexpected fixture failures.
+        if (error.message === 'Invalid InterceptionId.') cancelledInterceptions.push(requestId);
+        else failures.push(error.message);
+      }
     });
     await send('Fetch.enable', { patterns: [{ urlPattern: `${base}/api/*`, requestStage: 'Request' }] });
     script = await send('Page.addScriptToEvaluateOnNewDocument', { source: `if(location.origin===${JSON.stringify(base)})localStorage.setItem('sportbooking.token','test-only-api-session');` });

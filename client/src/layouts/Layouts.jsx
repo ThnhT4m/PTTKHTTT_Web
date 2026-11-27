@@ -24,8 +24,10 @@ export function Brand() {
   );
 }
 function UserMenu() {
-  const { user, logout } = useAuth();
+  const { user, loading, sessionError, retrySession, logout } = useAuth();
   const navigate = useNavigate();
+  if (loading) return <span className="header-session" role="status">Đang kiểm tra phiên…</span>;
+  if (sessionError) return <div className="header-session"><span role="alert">Chưa xác minh được phiên: {sessionError}</span><button className="button button--secondary button--small" onClick={retrySession}>Thử lại phiên đăng nhập</button></div>;
   return user ? (
     <div className="header-user">
       <span className="avatar">{user.full_name?.slice(0, 1)}</span>

@@ -1,3 +1,7 @@
+# Cập nhật TASK 6.1
+
+Website vận hành dùng sportbooking tại 5176; không dùng QA làm website. Harness mặc định ghi client/test-artifacts/task6.1/real/, từ chối ghi đè bằng chứng task5/task6 và từ chối DATABASE_URL/TEST_DATABASE_URL vận hành. Xem client/qa/HANDOVER.md cho lệnh hiện hành. Nội dung TASK 5 bên dưới là nền tảng harness; dùng đường dẫn bằng chứng TASK 6.1 cho lần chạy mới. TC-03/16/phần payment TC-22 là OUT_OF_SCOPE_TV3.
+
 # TASK 5: real HTTP, browser và PostgreSQL 16
 
 Bộ này khác `npm.cmd test --workspace client` (unit/mock/API adapter) và `test:browser` (mock + HTTP fixture).

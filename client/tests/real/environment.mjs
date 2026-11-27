@@ -9,11 +9,17 @@ import knex from 'knex';
 import { createApiClient, createHttpTransport } from '../../src/api/http.js';
 import { createSession } from '../../src/api/session.js';
 import { memoryStorage } from '../helpers.js';
+import { assertQaAdmin, assertQaDatabase, assertQaEnvironment } from '../../scripts/lib/databaseSafety.mjs';
 
 export const root = fileURLToPath(new URL('../../../', import.meta.url));
-export const artifacts = new URL('../../test-artifacts/task5/', import.meta.url);
+const qaTask = process.env.SPORTBOOKING_QA || 'task6.1';
+assert.equal(qaTask, 'task6.1', 'TASK 5/6 evidence is read-only. Run new tests with SPORTBOOKING_QA=task6.1.');
+const qaSuite = process.env.SPORTBOOKING_QA_SUITE || 'real';
+assert.ok(['real', 'extended-before', 'extended-after', 'fault', 'long-before', 'long-after', 'scope-before', 'scope-after'].includes(qaSuite), 'Unknown QA artifact suite.');
+export const artifacts = new URL(`../../test-artifacts/${qaTask}/${qaSuite}/`, import.meta.url);
 export async function createEnvironment() {
-  const adminUrl = new URL(process.env.TASK5_DB_ADMIN_URL || 'postgres://sportbooking:sportbooking_dev@127.0.0.1:55435/postgres');
+  assertQaEnvironment(process.env);
+  const adminUrl = assertQaAdmin(process.env.TASK5_DB_ADMIN_URL || 'postgres://sportbooking:sportbooking_dev@127.0.0.1:55435/postgres');
   assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(adminUrl.hostname), 'Only a local disposable PostgreSQL instance is supported.');
   assert.equal(adminUrl.pathname, '/postgres', 'Setup connects to postgres only to CREATE a new test database.');
   const connection = new pg.Client({ connectionString: adminUrl.href, connectionTimeoutMillis: 10000 });
@@ -26,9 +32,11 @@ export async function createEnvironment() {
     // CREATE fails if the name exists. No DROP/TRUNCATE or reset of an existing database.
     await connection.query(`CREATE DATABASE "${name}"`);
     const url = new URL(adminUrl); url.pathname = '/' + name;
+    assertQaDatabase(url.href, suffix);
     return { name, url: url.href };
   }
   const uiDatabase = await createDatabase('ui'), backendDatabase = await createDatabase('backend');
+  assertQaDatabase(uiDatabase.url, 'ui'); assertQaDatabase(backendDatabase.url, 'backend');
   await connection.end();
   const database = knex({ client: 'pg', connection: uiDatabase.url, pool: { min: 0, max: 12 } });
   assert.equal((await database.raw('SELECT current_database() AS name')).rows[0].name, uiDatabase.name);
@@ -43,6 +51,7 @@ export async function createEnvironment() {
   execFileSync('git', ['check-ignore', fileURLToPath(artifacts)], { cwd: root, stdio: 'ignore' });
   await writeFile(new URL('backend.env', artifacts), ['NODE_ENV=test', `DATABASE_URL=${uiDatabase.url}`, `JWT_SECRET=${process.env.JWT_SECRET}`, 'PAYMENT_SANDBOX_ENABLED=false', `CLIENT_ORIGIN=${process.env.CLIENT_ORIGIN}`].join('\n') + '\n', { mode: 0o600 });
   await database.migrate.latest({ directory: fileURLToPath(new URL('../../../server/src/db/migrations/', import.meta.url)) });
+  assertQaDatabase(process.env.DATABASE_URL, 'ui');
   await database.seed.run({ directory: fileURLToPath(new URL('../../../server/src/db/seeds/', import.meta.url)) });
   const { app } = await import('../../../server/src/app.js');
   const { db: serverDb } = await import('../../../server/src/db/knex.js');

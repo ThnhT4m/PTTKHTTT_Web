@@ -4,6 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import { createEnvironment, artifacts } from './environment.mjs';
 import { runApiChecks } from './api.mjs';
 import { runBrowserChecks } from './browser.mjs';
+import { assertQaDatabase } from '../../scripts/lib/databaseSafety.mjs';
 
 const results = [], exec = promisify(execFile);
 let environment;
@@ -19,6 +20,7 @@ try {
   const frontend = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: environment.root, encoding: 'utf8' }).trim();
   await runApiChecks(environment, check);
   await runBrowserChecks(environment, check);
+  assertQaDatabase(environment.backendDatabase.url, 'backend');
   const backend = await exec(process.execPath, ['--test', '--test-concurrency=1', 'test/acceptance.test.js', 'test/unit/auth-validation.test.js', 'test/unit/calendar.test.js'], { cwd: new URL('../../../server/', import.meta.url), env: { ...process.env, TEST_DATABASE_URL: environment.backendDatabase.url }, maxBuffer: 8 * 1024 * 1024 }).then((r) => ({ pass: true, output: r.stdout + r.stderr }), (e) => ({ pass: false, output: e.stdout + e.stderr }));
   await writeFile(new URL('backend-regression.log', artifacts), backend.output);
   const counts = { pass: Number(backend.output.match(/(?:ℹ|#) pass (\d+)/)?.[1] || 0), fail: Number(backend.output.match(/(?:ℹ|#) fail (\d+)/)?.[1] || 0), skip: Number(backend.output.match(/(?:ℹ|#) skipped (\d+)/)?.[1] || 0) };

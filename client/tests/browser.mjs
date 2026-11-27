@@ -107,11 +107,11 @@ try {
   const pendingPath = await evaluate(`document.querySelector('a[href^="/checkout/"]').getAttribute('href')`);
   await visit(pendingPath, `document.querySelector('.countdown strong')?.innerText!=='00:00' && !!document.querySelector('.summary-list')`);
   await evaluate(`document.querySelector('.panel__body > button.button--primary').click()`);
-  await until(`document.querySelector('.notice--info')?.innerText.includes('TASK 6')`);
+  await until(`document.querySelector('.notice--info')?.innerText.includes('nằm ngoài phạm vi nghiệm thu Frontend')`);
   assert.equal(await evaluate(`document.querySelector('.panel__body > button.button--primary').disabled`), true);
   assert.equal(await evaluate(`document.querySelector('.badge--PENDING')?.innerText`), 'Chờ thanh toán');
   await visit(pendingPath, `!!document.querySelector('.badge--PENDING')`);
-  pass('Customer: lịch đặt, checkout, refresh và payment bị vô hiệu hóa trước TASK 6');
+  pass('Customer: lịch đặt, checkout, refresh và payment nằm ngoài phạm vi Frontend QA');
   await visit('/admin', `location.pathname==='/venues' && document.querySelectorAll('.venue-card').length===2`);
   pass('Customer bị chặn route ADMIN');
   await logout();

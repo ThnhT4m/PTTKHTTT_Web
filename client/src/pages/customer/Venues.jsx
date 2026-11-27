@@ -4,7 +4,7 @@ import { ArrowRight, CalendarDays } from 'lucide-react';
 import { VenueCard, Notice, Empty, SPORTS, PageHeader, money, StatusBadge } from '../../components/shared';
 import { useCustomerResource, useDebounced } from '../../hooks/useCustomerResource.js';
 import { customer, pagePath } from '../../services/customer.js';
-import { PAGE_SIZE, priceRangeError } from '../../utils/customer.js';
+import { priceRangeError } from '../../utils/customer.js';
 import { CustomerResource, Pagination } from '../../components/customer/ResourceState';
 import CatalogFilters from '../../components/customer/CatalogFilters';
 import VenueHero from '../../components/customer/VenueHero';

@@ -4,7 +4,7 @@ import { CreditCard, Landmark, Wallet, ShieldCheck, CheckCircle2 } from 'lucide-
 import { get, post } from '../../api/client';
 import { BookingSummary, PageHeader, Loading, Notice, StatusBadge } from '../../components/shared';
 export default function CheckoutPage() {
-  // TASK 6 will enable this after payment integration and acceptance.
+  // Online payment is outside the frontend QA acceptance scope.
   const paymentEnabled = false;
   const { bookingId } = useParams();
   const [booking, setBooking] = useState(null);
@@ -26,6 +26,7 @@ export default function CheckoutPage() {
       .then(({ data, server_time }) => {
         if (mounted) {
           setBooking(data);
+          setError('');
           setOffset(new Date(server_time).getTime() - Date.now());
         }
       })
@@ -99,7 +100,8 @@ export default function CheckoutPage() {
               <div className="panel__body">
                 <div
                   className={`countdown ${expired ? 'countdown--expired' : ''}`}
-                  aria-live="polite"
+                  role="timer"
+                  aria-live="off"
                 >
                   <span>
                     {expired ? 'Thời hạn giữ chỗ đã kết thúc' : 'Thời gian giữ chỗ còn lại'}
@@ -134,7 +136,7 @@ export default function CheckoutPage() {
                   ))}
                 </div>
                 <Notice type="info">
-                  Thanh toán online đang tạm hoãn và sẽ được hoàn thiện ở TASK 6. Chưa có tiền được ghi nhận từ thao tác giữ chỗ này.
+                  Thanh toán online chưa khả dụng và nằm ngoài phạm vi nghiệm thu Frontend này. Chưa có tiền được ghi nhận từ thao tác giữ chỗ này.
                 </Notice>
                 <button
                   className="button button--primary button--wide"

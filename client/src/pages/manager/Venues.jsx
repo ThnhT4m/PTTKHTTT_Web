@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, MapPin, RefreshCw, CalendarDays } from 'lucide-react';
-import { PageHeader, Notice, StatusBadge, Field } from '../../components/shared';
+import { PageHeader, Notice, StatusBadge } from '../../components/shared';
 import { manager } from '../../services/manager.js';
 import { useManagerResource } from '../../hooks/useManagerResource.js';
 import { ResourceState } from '../../components/manager/ResourceState';

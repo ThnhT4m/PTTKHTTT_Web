@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Field, Modal, Notice, SPORTS } from '../shared';
 import { manager } from '../../services/manager.js';
 import { ApiError } from '../../api/errors.js';
@@ -7,10 +7,13 @@ import { MutationFeedback } from './ResourceState';
 
 export default function EntityForm({ type, item, venueId, onClose, onDone, onReload }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState(null);
+  const locked = useRef(false);
+  const [unknown, setUnknown] = useState(false);
   const isVenue = type === 'venues', title = `${item ? 'Chỉnh sửa' : 'Thêm'} ${isVenue ? 'cơ sở' : 'sân'}`;
   async function submit(event) {
     event.preventDefault();
-    if (busy) return;
+    if (locked.current || unknown) return;
+    locked.current = true;
     const values = Object.fromEntries(new FormData(event.currentTarget));
     for (const key of isVenue ? ['payment_hold_minutes', 'minimum_online_booking_lead_minutes'] : ['hourly_price']) values[key] = Number(values[key]);
     setBusy(true); setError(null);
@@ -19,12 +22,16 @@ export default function EntityForm({ type, item, venueId, onClose, onDone, onRel
       if (Object.keys(errors).length) throw new ApiError({ code: 'VALIDATION_ERROR', message: Object.values(errors)[0], details: errors }, 400);
       const result = await (isVenue ? manager.saveVenue(item, values) : manager.saveCourt(venueId, item, values));
       onDone(`Đã ${item ? 'cập nhật' : 'thêm'} ${isVenue ? 'cơ sở' : 'sân'}.`, result.data);
-    } catch (err) { setError(err); } finally { setBusy(false); }
+    } catch (err) {
+      if (err.kind === 'network' || !err.status || err.status >= 500) setUnknown(true);
+      setError(err);
+    } finally { locked.current = false; setBusy(false); }
   }
   return <Modal title={title} onClose={() => { if (!busy) onClose(); }}>
     <MutationFeedback error={error} onReload={onReload} />
+    {unknown && <Notice>Chưa xác định được kết quả lưu. Đóng biểu mẫu và tải lại danh sách để kiểm tra trước khi thao tác tiếp; không gửi lại yêu cầu này.</Notice>}
     <form className="form-stack" onSubmit={submit}>
-      <fieldset className="manager-form" disabled={busy}>
+      <fieldset className="manager-form" disabled={busy || unknown}>
         <Field label={isVenue ? 'Tên cơ sở' : 'Tên sân'}><input className="input" name="name" required minLength={2} maxLength={isVenue ? 150 : 120} defaultValue={item?.name} autoFocus /></Field>
         {isVenue ? <>
           <Field label="Địa chỉ"><input className="input" name="address" required minLength={3} maxLength={300} defaultValue={item?.address} /></Field>
@@ -39,7 +46,7 @@ export default function EntityForm({ type, item, venueId, onClose, onDone, onRel
         </div>}
         <Field label="Mô tả"><textarea className="input" name="description" maxLength={2000} defaultValue={item?.description || ''} /></Field>
         {!isVenue && <Notice type="info">Giá mặc định chỉ áp dụng cho các ca sinh mới. Giá ca đã tồn tại và giá booking đã tạo được giữ nguyên.</Notice>}
-        <div className="form-actions"><button className="button button--secondary" type="button" onClick={onClose}>Đóng</button><button className="button button--primary" disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu thông tin'}</button></div>
+        <div className="form-actions"><button className="button button--secondary" type="button" onClick={onClose}>Đóng</button><button className="button button--primary" disabled={busy || unknown}>{busy ? 'Đang lưu…' : 'Lưu thông tin'}</button></div>
       </fieldset>
     </form>
   </Modal>;

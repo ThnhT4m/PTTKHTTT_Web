@@ -1,27 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { get } from '../api/client.js';
 import { createLatestLoader } from '../api/latest.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 export function useCustomerResource(path, { interval = 0, load } = {}) {
+  const { user, loading: restoring } = useAuth();
+  const key = JSON.stringify([path, user?.id, user?.role, restoring]);
   const [state, setState] = useState({ key: null, data: null, error: null, loading: true });
   const [revision, setRevision] = useState(0), loader = useRef(null);
   loader.current ||= createLatestLoader();
   const reload = useCallback(() => { loader.current.cancel(); setState((old) => ({ ...old, data: null, loading: true, error: null })); setRevision((n) => n + 1); }, []);
   useEffect(() => {
-    if (!path) { setState({ key: path, data: null, error: null, loading: false }); return; }
-    setState({ key: path, data: null, error: null, loading: true });
+    if (!path) { setState({ key, data: null, error: null, loading: false }); return; }
+    setState({ key, data: null, error: null, loading: true });
     loader.current.run((signal) => load ? load({ signal }) : get(path, { signal }), ({ result, error }) => {
-      setState({ key: path, data: result?.data ?? null, error: error || null, loading: false,
+      setState({ key, data: result?.data ?? null, error: error || null, loading: false,
         offset: result?.server_time ? Date.parse(result.server_time) - Date.now() : null });
     });
     return () => loader.current.cancel();
-  }, [path, revision]);
+  }, [path, key, revision]);
   useEffect(() => {
     if (!interval) return;
     const timer = setInterval(() => setRevision((n) => n + 1), interval);
     return () => clearInterval(timer);
   }, [path, interval]);
-  return { ...(state.key === path ? state : { data: null, error: null, loading: !!path, offset: null }), reload };
+  return { ...(state.key === key ? state : { data: null, error: null, loading: !!path, offset: null }), reload };
 }
 export function useDebounced(value, delay = 400) {
   const [debounced, setDebounced] = useState(value);
