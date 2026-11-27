@@ -3,7 +3,32 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": {"dev": "vite --host 0.0.0.0", "build": "vite build", "preview": "vite preview --host 0.0.0.0"},
-  "dependencies": {"react": "^19.2.0", "react-dom": "^19.2.0", "react-router-dom": "^7.9.0", "lucide-react": "^0.468.0"},
-  "devDependencies": {"vite": "^6.4.0", "@vitejs/plugin-react": "^4.7.0"}
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "node tests/browser.mjs",
+    "test:real": "node tests/real/run.mjs",
+    "test:qa": "node tests/qa/run.mjs",
+    "test:qa:edges": "node tests/qa/edge-run.mjs",
+    "test:qa:long": "node tests/qa/long-data.mjs",
+    "test:qa:scope": "node tests/qa/session-scope.mjs",
+    "ops:bootstrap": "node scripts/operations/bootstrap.mjs",
+    "ops:start": "node scripts/operations/manage.mjs start",
+    "ops:stop": "node scripts/operations/manage.mjs stop",
+    "ops:status": "node scripts/operations/manage.mjs status",
+    "ops:restart-backend": "node scripts/operations/manage.mjs restart-backend",
+    "ops:restart-frontend": "node scripts/operations/manage.mjs restart-frontend"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.0",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": {
+    "vite": "^6.4.0",
+    "@vitejs/plugin-react": "^4.7.0"
+  }
 }

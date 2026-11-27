@@ -13,7 +13,7 @@
   line-height: 1.6;
   --green: #176847;
   --dark: #163c30;
-  --muted: #74837b;
+  --muted: #52675b;
   --line: #e3e8e0;
   --cream: #f7f8f5;
   --mint: #e8f2e8;
@@ -26,6 +26,7 @@
 }
 body {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 button,
 input,
@@ -263,8 +264,9 @@ select {
 .icon-button {
   border: 0;
   background: transparent;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   border-radius: 8px;
   display: inline-grid;
   place-items: center;
@@ -294,6 +296,7 @@ select {
   gap: 20px;
   margin-bottom: 28px;
 }
+.page-header > div { min-width: 0; }
 .page-header__eyebrow {
   font-size: 9px;
   font-weight: 650;
@@ -869,6 +872,7 @@ select {
 }
 .court-row__info {
   flex: 1;
+  min-width: 0;
 }
 .court-row__info > small {
   color: #779169;
@@ -890,6 +894,8 @@ select {
   flex-direction: column;
   align-items: flex-end;
   gap: 12px;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 .court-row__action > strong {
   font-size: 14px;
@@ -1030,7 +1036,7 @@ select {
 }
 .field__hint {
   font-size: 10px;
-  color: #8c9a85;
+  color: #52675b;
   line-height: 1.8;
   display: block;
   margin-top: 3px;
@@ -1046,7 +1052,7 @@ select {
   font-size: 12px;
 }
 .input::placeholder {
-  color: #b0baaa;
+  color: #667364;
 }
 .form-stack {
   display: flex;
@@ -1117,7 +1123,7 @@ select {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #94a28b;
+  color: #52675b;
   text-align: center;
   font-size: 12px;
 }
@@ -1143,13 +1149,16 @@ select {
   border-bottom: 1px solid #edf0e8;
 }
 .summary-list__row dt {
-  color: #91a086;
+  flex: 0 0 34%;
+  color: #52675b;
   font-size: 11px;
 }
 .summary-list__row dd {
+  flex: 1;
   margin: 0;
   font-weight: 500;
   text-align: right;
+  min-width: 0;
 }
 .summary-list__row--total {
   padding-top: 21px;
@@ -1168,7 +1177,7 @@ select {
 }
 .countdown {
   background: #fcf8ed;
-  color: #af8a4b;
+  color: #755319;
   padding: 20px;
   border-radius: 10px;
   display: flex;
@@ -1353,6 +1362,7 @@ select {
   gap: 7px;
 }
 .sidebar__nav > a {
+  min-height: 44px;
   padding: 12px 14px;
   border-radius: 9px;
   display: flex;
@@ -1527,6 +1537,7 @@ select {
   background: #fff;
   color: #8d9e7e;
   text-align: left;
+  max-width: 100%;
   font-size: 11px;
 }
 .venue-switcher__item small {
@@ -1550,6 +1561,11 @@ select {
 .venue-info h2 {
   font-size: 19px;
 }
+.venue-info > div, .venue-switcher__item > span { min-width: 0; }
+.panel-grid > *, .schedule-grid > *, .checkout-grid > *, .metric-grid > *,
+.booking-card__details > div, .modal__body > *, .panel__body > * { min-width: 0; }
+.panel-grid, .schedule-grid, .checkout-grid, .panel, .booking-card { min-width: 0; }
+.data-table td, .audit-details pre, .summary-list__row dd { overflow-wrap: anywhere; }
 .walkin-total {
   font-size: 26px;
   color: var(--green);
@@ -2703,6 +2719,33 @@ select {
   .footer > span:last-child > svg {
     width: 11px;
   }
+}
+/* Small operational text must remain readable on the existing light surfaces. */
+.header-session { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; max-width: 420px; font-size: 12px; }
+.booking-code, .booking-card__details p, .secure-note, .tabs button,
+.venue-switcher__item, .venue-switcher__item small, .sidebar__nav > a,
+.topbar__label, .data-table td > small, .data-table th, .audit-details,
+.metric-card > span:not(.metric-card__icon), .auth-card__form > p:not(.page-header__eyebrow),
+.auth-card__aside p, .legend__item { color: #52675b; }
+.dashboard .field__hint, .dashboard .muted, .dashboard .field__label,
+.dashboard .venue-switcher__item, .dashboard .venue-switcher__item small,
+.dashboard .sidebar__nav > a, .dashboard .data-table th, .dashboard .data-table td > small,
+.dashboard .metric-card > span:not(.metric-card__icon), .dashboard .audit-details { font-size: 12px; }
+.dashboard .input { font-size: 14px; }
+.dashboard .data-table .button { min-height: 44px; font-size: 12px; }
+.dashboard .badge { font-size: 11px; }
+.modal .button { min-height: 44px; }
+summary:focus-visible { outline: 3px solid #176847; outline-offset: 3px; }
+.slot-card--HELD { color: #725016; }
+.slot-card--BOOKED { color: #465e87; }
+.slot-card--UNAVAILABLE { color: #58634f; }
+.slot-card small { opacity: 1; }
+@media (max-width: 580px) {
+  .app-shell .site-header .button { min-height: 44px; font-size: 12px; }
+  .dashboard .input, .auth-card__form .input { font-size: 16px; }
+  .dashboard .manager-slot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard .slot-card__time, .dashboard .slot-card__price { font-size: 12px; }
+  .workflow-filters .field:has(input[type=date]) { min-width: 160px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
