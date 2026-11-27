@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Field, Notice, Empty, SlotLegend, StatusBadge, Modal, money, dateVN, timeVN, todayVN } from '../shared';
 import { useManagerResource } from '../../hooks/useManagerResource.js';
+import { useServerNow } from '../../hooks/useCustomerResource.js';
 import { manager } from '../../services/manager.js';
 import { MAX_PRICE, canEditSlotPrice, canChangeSlotStatus, validPrice } from '../../utils/managerValidation.js';
 import { ApiError } from '../../api/errors.js';
@@ -30,12 +31,8 @@ function PriceModal({ slot, onClose, onDone, onReload }) {
 }
 export default function ManagerSchedule({ courts, courtId, setCourtId, revision, onGenerate, venueActive }) {
   const [date, setDate] = useState(todayVN()), [selectedId, setSelectedId] = useState(''), [modal, setModal] = useState(null), [message, setMessage] = useState('');
-  const [clock, setClock] = useState(Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setClock(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
   const slots = useManagerResource((options) => courtId && date ? manager.slots(courtId, date, options) : null, [courtId, date, revision]);
+  const clock = useServerNow(slots.offset);
   const selected = slots.data?.find((s) => s.id === selectedId);
   useEffect(() => { setSelectedId(''); setMessage(''); }, [courtId, date]);
   function done(text) { setModal(null); setMessage(text); slots.reload(); }

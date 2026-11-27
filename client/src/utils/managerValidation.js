@@ -3,18 +3,18 @@ import { addDays, todayVN } from './format.js';
 
 export const SPORTS = ['FOOTBALL', 'BADMINTON', 'TENNIS', 'PICKLEBALL', 'BASKETBALL'];
 export const OPERATION_STATES = ['ACTIVE', 'INACTIVE', 'MAINTENANCE'];
-// Keep the existing frontend limits; the real backend still decides validity.
+// Metadata bounds match the Backend request schemas.
 export const MAX_PRICE = 100000000;
 export function metadataErrors(type, values, partial = false) {
   const errors = {};
   const text = (key, min, max) => {
     if (partial && !Object.hasOwn(values, key)) return;
-    if (typeof values[key] !== 'string' || values[key].trim().length < min || values[key].length > max)
+    if (typeof values[key] !== 'string' || values[key].trim().length < min || values[key].trim().length > max)
       errors[key] = `${key === 'name' ? 'Tên' : key === 'address' ? 'Địa chỉ' : 'Quận / huyện'} cần từ ${min} đến ${max} ký tự.`;
   };
-  text('name', 2, type === 'venues' ? 150 : 100);
+  text('name', 2, type === 'venues' ? 150 : 120);
   if (type === 'venues') {
-    text('address', 1, 255); text('district', 1, 100);
+    text('address', 3, 300); text('district', 1, 100);
     for (const [key, min, max] of [['payment_hold_minutes', 1, 10], ['minimum_online_booking_lead_minutes', 10, 1440]]) {
       if (values[key] !== undefined && (!Number.isInteger(values[key]) || values[key] < min || values[key] > max))
         errors[key] = `${key === 'payment_hold_minutes' ? 'Giữ chỗ' : 'Thời gian đặt trước'} phải là số nguyên ${min}–${max} phút.`;

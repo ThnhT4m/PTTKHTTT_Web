@@ -25,9 +25,9 @@ export default function EntityForm({ type, item, venueId, onClose, onDone, onRel
     <MutationFeedback error={error} onReload={onReload} />
     <form className="form-stack" onSubmit={submit}>
       <fieldset className="manager-form" disabled={busy}>
-        <Field label={isVenue ? 'Tên cơ sở' : 'Tên sân'}><input className="input" name="name" required minLength={2} maxLength={isVenue ? 150 : 100} defaultValue={item?.name} autoFocus /></Field>
+        <Field label={isVenue ? 'Tên cơ sở' : 'Tên sân'}><input className="input" name="name" required minLength={2} maxLength={isVenue ? 150 : 120} defaultValue={item?.name} autoFocus /></Field>
         {isVenue ? <>
-          <Field label="Địa chỉ"><input className="input" name="address" required maxLength={255} defaultValue={item?.address} /></Field>
+          <Field label="Địa chỉ"><input className="input" name="address" required minLength={3} maxLength={300} defaultValue={item?.address} /></Field>
           <Field label="Quận / huyện"><input className="input" name="district" required maxLength={100} defaultValue={item?.district} /></Field>
           <div className="form-grid">
             <Field label="Thời gian giữ chỗ (phút)" hint="Số nguyên từ 1 đến 10."><input className="input" name="payment_hold_minutes" type="number" min={1} max={10} step={1} required defaultValue={item?.payment_hold_minutes ?? 5} /></Field>

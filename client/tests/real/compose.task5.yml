@@ -1,0 +1,6 @@
+# Local TASK 5 network only; root Compose/database configuration stays unchanged.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${TASK5_SUBNET:-10.242.5.0/24}
